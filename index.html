@@ -292,6 +292,11 @@
     }
     .form textarea{min-height:110px;resize:vertical;grid-column:1/-1}
     .submit{width:100%;margin-top:12px}
+    .consent-line{
+      display:flex;align-items:flex-start;gap:9px;margin-top:13px;
+      font-size:9px;line-height:1.45;color:#68757D
+    }
+    .consent-line input{width:auto;margin-top:2px}
 
     .reveal{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
     .reveal.in{opacity:1;transform:none}
@@ -413,7 +418,7 @@
               <li>Réassort consommables sur demande</li>
               <li>Interventions ponctuelles ou récurrentes</li>
             </ul>
-            <button class="pill light js-quote">Découvrir <span>→</span></button>
+            <button class="pill light js-quote" data-service="Pack Airbnb / Booking">Découvrir <span>→</span></button>
           </div>
         </article>
 
@@ -431,7 +436,7 @@
               <li>Présence jour / nuit selon les besoins</li>
               <li>Dispositif adapté à chaque résidence</li>
             </ul>
-            <button class="pill dark js-quote">Découvrir <span>→</span></button>
+            <button class="pill dark js-quote" data-service="Gardiennage résidence haut standing">Découvrir <span>→</span></button>
           </div>
         </article>
       </div>
@@ -454,7 +459,7 @@
           <h2>Votre logement prêt pour le prochain voyageur.</h2>
           <p>Un seul prestataire pour le ménage, le linge et la remise en place.</p>
         </div>
-        <button class="pill dark js-quote">Demander une offre <span>→</span></button>
+        <button class="pill dark js-quote" data-service="Pack ménage + linge hôtelier">Demander une offre <span>→</span></button>
       </div>
 
       <div class="hospitality-grid">
@@ -612,22 +617,77 @@
       </div>
       <button class="close" id="closeModal" aria-label="Fermer">×</button>
     </div>
-    <p style="font-size:12px;line-height:1.6;color:#5F6B72">Quelques informations suffisent pour préparer une première proposition.</p>
-    <form onsubmit="event.preventDefault();document.getElementById('success').style.display='block'">
+
+    <p style="font-size:12px;line-height:1.6;color:#5F6B72">
+      Quelques informations suffisent pour préparer une première proposition adaptée à votre activité.
+    </p>
+
+    <!-- NETLIFY FORM: submissions appear in Netlify > Forms > demande-devis -->
+    <form
+      id="leadForm"
+      name="demande-devis"
+      method="POST"
+      data-netlify="true"
+      netlify-honeypot="bot-field"
+    >
+      <input type="hidden" name="form-name" value="demande-devis">
+
+      <p style="display:none">
+        <label>Ne pas remplir ce champ : <input name="bot-field"></label>
+      </p>
+
       <div class="form">
-        <input required placeholder="Nom complet">
-        <input required type="tel" placeholder="Téléphone">
-        <select>
-          <option>Entretien Premium</option>
-          <option>Sécurité & Gardiennage</option>
-          <option>Entretien + Sécurité</option>
-          <option>Espaces verts</option>
+        <input name="nom" required placeholder="Nom complet *">
+        <input name="telephone" required type="tel" placeholder="Téléphone *">
+        <input name="email" type="email" placeholder="Email">
+        <input name="ville" required placeholder="Ville *">
+
+        <select name="profil" required>
+          <option value="">Vous êtes... *</option>
+          <option>Propriétaire Airbnb / Booking</option>
+          <option>Conciergerie</option>
+          <option>Syndic / Gestionnaire de résidence</option>
+          <option>Entreprise</option>
+          <option>Particulier</option>
         </select>
-        <input placeholder="Ville">
-        <textarea placeholder="Décrivez votre besoin"></textarea>
+
+        <select name="service" id="serviceSelect" required>
+          <option value="">Service recherché... *</option>
+          <option>Pack Airbnb / Booking</option>
+          <option>Service linge hôtelier</option>
+          <option>Pack ménage + linge hôtelier</option>
+          <option>Gardiennage résidence haut standing</option>
+          <option>Autre</option>
+        </select>
+
+        <input name="volume" placeholder="Nb. logements / taille résidence">
+
+        <select name="frequence">
+          <option value="">Fréquence souhaitée</option>
+          <option>Ponctuelle</option>
+          <option>Hebdomadaire</option>
+          <option>Plusieurs fois par semaine</option>
+          <option>Quotidienne</option>
+          <option>Selon réservations / turnovers</option>
+          <option>Gardiennage permanent</option>
+        </select>
+
+        <textarea
+          name="message"
+          placeholder="Décrivez votre besoin : nombre de logements, rotations mensuelles, résidence, horaires..."
+        ></textarea>
       </div>
-      <button class="pill dark submit" type="submit">Recevoir ma proposition <span>→</span></button>
-      <div id="success" style="display:none;margin-top:11px;font-size:11px;color:#36734D">Merci. Votre demande a bien été enregistrée dans cette démonstration.</div>
+
+      <label class="consent-line">
+        <input type="checkbox" name="consentement_contact" required>
+        <span>J’accepte d’être recontacté(e) par AURÉA au sujet de ma demande.</span>
+      </label>
+
+      <button class="pill dark submit" type="submit">
+        Envoyer ma demande <span>→</span>
+      </button>
+
+      <div id="formStatus" style="display:none;margin-top:12px;font-size:11px;line-height:1.5"></div>
     </form>
   </div>
 </div>
@@ -680,6 +740,60 @@
     });
   }, {threshold:.12});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+  // Pré-sélection du service depuis les CTA
+  document.querySelectorAll('[data-service]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const select = document.getElementById('serviceSelect');
+      if(!select) return;
+      [...select.options].forEach(opt=>{
+        if(opt.text.trim() === btn.dataset.service.trim()){
+          select.value = opt.text;
+        }
+      });
+    });
+  });
+
+  // Soumission réelle vers Netlify Forms
+  const leadForm = document.getElementById('leadForm');
+  const formStatus = document.getElementById('formStatus');
+
+  if(leadForm){
+    leadForm.addEventListener('submit', async (event)=>{
+      event.preventDefault();
+
+      const submitButton = leadForm.querySelector('button[type="submit"]');
+      const originalText = submitButton.innerHTML;
+
+      formStatus.style.display = 'block';
+      formStatus.style.color = '#5F6B72';
+      formStatus.textContent = 'Envoi de votre demande...';
+      submitButton.disabled = true;
+      submitButton.innerHTML = 'Envoi en cours...';
+
+      try{
+        const formData = new FormData(leadForm);
+        const response = await fetch('/', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams(formData).toString()
+        });
+
+        if(!response.ok) throw new Error('Submission failed');
+
+        formStatus.style.color = '#2E7548';
+        formStatus.innerHTML = '<strong>Merci.</strong> Votre demande a bien été envoyée. Un conseiller AURÉA vous recontactera rapidement.';
+        leadForm.reset();
+      }catch(error){
+        formStatus.style.color = '#A33A32';
+        formStatus.textContent = 'L’envoi n’a pas abouti. Merci de réessayer dans quelques instants.';
+      }finally{
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalText;
+      }
+    });
+  }
+
 </script>
 </body>
 </html>
