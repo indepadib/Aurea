@@ -91,13 +91,13 @@ function dashboard(){
  '<div class="dash-grid"><section class="panel"><h2>Pipeline de conversion</h2><p class="sub">Demandes par étape, mises à jour depuis les fiches clients.</p><div class="pipeline">'+statuses.map((s,i)=>'<div class="pipeline-row"><span>'+html(s)+'</span><div class="bar"><i style="width:'+counts[i]/max*100+'%"></i></div><strong>'+counts[i]+'</strong></div>').join("")+'</div><p class="section-caption">Un client apparaît dans son statut actuel, pas dans toutes les étapes précédentes.</p></section>'+
  '<section class="panel"><h2>Prochaines actions</h2><p class="sub">Relances, rendez-vous et tâches prioritaires.</p>'+
  (next.length?next.map(x=>'<div class="next-item"><div><b>'+html(x.name)+'</b><small>'+html(x.action)+'</small></div><span class="pill-date">'+html(x.date||"À planifier")+'</span></div>').join(""):'<div class="empty"><div class="empty-icon">✦</div><h3>Tout commence ici</h3><p>Ajoutez un prospect ou une tâche pour préparer vos premières actions commerciales.</p><button class="btn secondary" data-action="add" data-kind="prospect">+ Ajouter un prospect</button></div>')+
- '</section></div><div class="dash-grid"><section class="panel"><h2>Contenus marketing</h2><p class="sub">Suivi des campagnes Facebook, Instagram et groupes de Zenata.</p><div style="display:flex;gap:12px;margin-top:22px;flex-wrap:wrap">'+badge(content.filter(x=>x.data.status==="Publié").length+" publiés")+badge(content.filter(x=>x.data.status==="Programmé").length+" programmés")+badge(content.filter(x=>x.data.status==="À produire").length+" à produire")+'</div><button style="margin-top:20px" class="btn secondary small" data-view="content">Ouvrir le calendrier →</button></section><section class="panel"><h2>Actions d'équipe</h2><p class="sub">Le suivi opérationnel des tâches.</p><span class="number" style="display:block;font-size:33px;font-weight:750;color:var(--navy2);margin:20px 0 6px">'+tasks.filter(x=>x.data.status==="Terminée").length+' / '+tasks.length+'</span><small class="muted">Tâches terminées</small><div style="margin-top:20px"><button class="btn secondary small" data-view="task">Ouvrir le plan →</button></div></section></div>';
+ '</section></div><div class="dash-grid"><section class="panel"><h2>Contenus marketing</h2><p class="sub">Suivi des campagnes Facebook, Instagram et groupes de Zenata.</p><div style="display:flex;gap:12px;margin-top:22px;flex-wrap:wrap">'+badge(content.filter(x=>x.data.status==="Publié").length+" publiés")+badge(content.filter(x=>x.data.status==="Programmé").length+" programmés")+badge(content.filter(x=>x.data.status==="À produire").length+" à produire")+'</div><button style="margin-top:20px" class="btn secondary small" data-view="content">Ouvrir le calendrier →</button></section><section class="panel"><h2>Actions d’équipe</h2><p class="sub">Le suivi opérationnel des tâches.</p><span class="number" style="display:block;font-size:33px;font-weight:750;color:var(--navy2);margin:20px 0 6px">'+tasks.filter(x=>x.data.status==="Terminée").length+' / '+tasks.length+'</span><small class="muted">Tâches terminées</small><div style="margin-top:20px"><button class="btn secondary small" data-view="task">Ouvrir le plan →</button></div></section></div>';
 }
 function fieldText(key,value){
  if(key==="status"||key==="priority"||key==="segment")return badge(value);
  if(["revenue","quote","variableCost"].includes(key))return html(money(value));
  if(key==="date"||key==="dueDate"||key==="nextDate")return html(formatted(value));
- if(key==="sourceUrl")return value?'<a target="_blank" rel="noopener noreferrer" href="'+html(value)+'">Voir la source ↗</a>':"—";
+ if(key==="sourceUrl")return /^https?:\/\//i.test(String(value||""))?'<a target="_blank" rel="noopener noreferrer" href="'+html(value)+'">Voir la source ↗</a>':"—";
  return html(value||"—");
 }
 function sectionView(kind){
@@ -163,7 +163,7 @@ async function onFormSubmit(event){
   event.preventDefault();
   const button=event.target.querySelector("button");button.disabled=true;button.textContent="Connexion…";
   try{
-   await api("/api/aurea-auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",password:event.target.password.value})});
+   await api("/api/aurea-auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",password:new FormData(event.target).get("password")})});
    state.authenticated=true;shell();navigate(location.hash.slice(1)||"dashboard");await loadAll();
   }catch(e){showLogin(e.message);}
   return;
