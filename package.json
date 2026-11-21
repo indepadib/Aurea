@@ -1,0 +1,12 @@
+{
+  "name": "aurea-services",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@netlify/database": "2.0.3"
+  }
+}
