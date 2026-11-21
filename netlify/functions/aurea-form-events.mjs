@@ -11,7 +11,7 @@ export default {
   await db.sql`
    insert into aurea_crm_records (kind,data,source_key)
    values ('lead',${JSON.stringify(result.data)}::jsonb,${result.sourceKey})
-   on conflict (source_key) do nothing
+   on conflict (source_key) where source_key is not null do nothing
   `;
   console.log("Auréa CRM: verified Netlify form received.");
  }
