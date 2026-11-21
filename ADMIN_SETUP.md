@@ -40,7 +40,7 @@ Les créations dans l'admin **n'envoient pas de messages, ne publient pas de pos
 
 ## Non inclus en v1
 
-- Synchronisation automatique des soumissions Netlify Forms : 3 soumissions existaient lors de l'audit; valider leur nature avant import et documenter leur consentement.
+- Synchronisation **des futures soumissions vérifiées** de Netlify Forms vers le CRM par événement Netlify signé. Exige consentement explicite et dédoublonnage; les 3 soumissions historiques sont à qualifier manuellement avant tout import.
 - Publication automatique Facebook et Instagram (connexion Metricool et autorisations supplémentaires).
 - Agent IA WhatsApp ou prospection automatisée.
 - Connexion multi-utilisateurs, permissions par rôle, journal d'audit avancé.
