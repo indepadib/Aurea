@@ -9,7 +9,7 @@ const sections={
     ["consent","Base de contact","select",false,["À déterminer","Demande entrante","Contact professionnel autorisé","Ne pas solliciter"]],
     ["notes","Notes","textarea"]]},
   lead:{title:"Demandes & réservations",subtitle:"Des premiers messages jusqu'aux clients actifs et à leur marge.",singular:"demande",icon:"◉",columns:["name","segment","zone","status","quote","nextAction"],fields:[
-    ["name","Nom client / entreprise","text",true],["segment","Service","select",false,["HOSTS","HOME"]],
+    ["name","Nom client / entreprise","text",true],["segment","Service","select",false,["HOSTS","HOME","AUTRE"]],
     ["zone","Résidence / zone"],["service","Besoin détaillé","textarea"],["status","Statut","select",false,["Nouveau","Qualifié","Devis envoyé","Réservé","Client","Perdu"]],
     ["source","Origine","select",false,["Messenger","WhatsApp","Site Auréa","Instagram","Groupe Facebook","Partenaire","Autre"]],
     ["nextAction","Prochaine action"],["nextDate","Date prévue","date"],["owner","Responsable"],
