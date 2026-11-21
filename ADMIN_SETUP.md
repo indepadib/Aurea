@@ -10,7 +10,7 @@ Le dépôt conserve la vitrine actuelle `index.html` et `forms.html` **sans modi
 - Accessible **après déploiement et configuration** à `https://aurea-services.netlify.app/admin/`.
 - Base de données Netlify Database (PostgreSQL) : une migration crée `aurea_crm_records`, indépendante des formulaires publics.
 - Authentification serveur par mot de passe + session signée, cookie HttpOnly/Secure/SameSite Strict, origine vérifiée pour les écritures, rate limiting.
-- 5 collections CRUD : prospects, demandes, partenaires, contenus, tâches.
+- 5 collections CRUD : prospects, demandes, partenaires, contenus, tâches; backlog initial de tâches et d'idées de contenu préchargé.
 - Dashboard calculé uniquement à partir des vraies fiches enregistrées. Aucune donnée fictive.
 
 ## Avant une publication
@@ -53,7 +53,7 @@ Les créations dans l'admin **n'envoient pas de messages, ne publient pas de pos
 - Les contacts B2B sont à qualifier, la base ne doit pas contenir de coordonnées personnelles récupérées sans base légitime.
 - Les formulaires publics continuent à vivre dans Netlify Forms; le CRM n'affiche pas encore automatiquement leurs données.
 - Les devis sont préparés dans le CRM; la disponibilité réelle est confirmée par une personne.
-- Aucun record n'est pré-semé. Le dashboard part de 0 jusqu'aux premières saisies.
+- Un backlog initial de 8 tâches et 3 idées de contenus est initialisé par migration. Aucun prospect, client, revenu ou prestation fictive n’est créé; les KPIs business partent de zéro.
 - Export et sauvegarde avancés à ajouter avant passage à l'échelle.
 
 ## Tests conseillés
