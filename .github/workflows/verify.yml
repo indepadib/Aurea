@@ -1,0 +1,26 @@
+name: Verify Auréa Admin
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/admin-growth-crm]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - run: npm test
+      - run: node --check admin/app.js
+      - run: node --check netlify/functions/aurea-auth.mjs
+      - run: node --check netlify/functions/aurea-crm.mjs
