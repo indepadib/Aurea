@@ -78,3 +78,9 @@ npx netlify dev
 ```
 
 La base locale se lance via les outils Netlify; appliquer les migrations locales selon `netlify database migrations apply`. Ne jamais appliquer une migration manuellement sur la production.
+
+## Activation sécurisée — 21 novembre 2026
+
+- Les variables secrètes `AUREA_ADMIN_PASSWORD` et `AUREA_SESSION_SECRET` ont été vérifiées présentes dans Netlify avec accès Functions en production, sans lecture de leurs valeurs.
+- La configuration du mot de passe étant postérieure au déploiement précédent, ce changement documentaire déclenche une reconstruction Netlify pour que les variables soient disponibles au runtime.
+- Validation de la connexion et des parcours CRUD authentifiés à effectuer après le redéploiement ; ne pas interpréter la simple présence des variables comme un test de connexion réussi.
