@@ -42,6 +42,11 @@ test("Auréa Hosts renders private calendar, property and booking actions",async
   assert.ok(doc.querySelector('[name="checkout"]'));
   assert.ok(doc.querySelector('[name="checkin"]'));
   assert.equal(doc.querySelector('[data-action="create-company"]'),null);
+  doc.querySelector('#overlay [data-action="close"]').click();
+  doc.querySelector('[data-action="job"]').click();
+  await new Promise(resolve=>setTimeout(resolve,30));
+  assert.ok(doc.querySelector('form[data-form="incident"]'));
+  assert.ok(doc.querySelector('[data-action="reschedule"]'));
  }finally{ctx.restore();}
 });
 test("Auréa Operations renders private team and company controls",async()=>{
