@@ -188,7 +188,8 @@ async function action(name,el){
   const data=await api("/api/aurea-ops?resource=lock_code&property="+encodeURIComponent(el.dataset.id));
   elCode.textContent="Code de serrure : "+data.code;
   elCode.hidden=false;
-  setTimeout(()=>{if(elCode.isConnected){elCode.textContent="";elCode.hidden=true;}},30000);
+  const lockTimer=setTimeout(()=>{if(elCode.isConnected){elCode.textContent="";elCode.hidden=true;}},30000);
+  lockTimer.unref?.();
   return;
  }
  if(name==="clear-lock"){
