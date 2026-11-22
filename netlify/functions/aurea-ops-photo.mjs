@@ -4,6 +4,7 @@ import {randomUUID} from "node:crypto";
 import {isAuthorized,sameOrigin,response} from "../../lib/aurea-auth.mjs";
 import {hostId,UUID,detectImage} from "../../lib/aurea-ops-core.mjs";
 import {fieldActor} from "../../lib/aurea-field-core.mjs";
+import {validPhotoType} from "../../lib/aurea-property-security.mjs";
 
 const storeName="aurea-private-qa";
 export default async function handler(req){
@@ -34,21 +35,22 @@ export default async function handler(req){
   if(!admin&&!field)return response({error:"Photo réservée à Auréa et aux intervenants affectés"},403);
   if(Number(req.headers.get("content-length")||0)>3800000)return response({error:"Photo trop volumineuse (3 Mo maximum)"},413);
   if(!req.headers.get("content-type")?.includes("multipart/form-data"))return response({error:"Fichier attendu"},415);
-  const form=await req.formData(),jobId=String(form.get("jobId")||""),file=form.get("photo"),caption=String(form.get("caption")||"").trim().slice(0,100);
-  if(!UUID.test(jobId)||!(file instanceof File)||file.size>3145728||file.size<50)return response({error:"Fichier ou intervention invalide"},400);
+  const form=await req.formData(),jobId=String(form.get("jobId")||""),file=form.get("photo"),caption=String(form.get("caption")||"").trim().slice(0,100),photoType=String(form.get("photoType")||"");
+  if(!UUID.test(jobId)||!(file instanceof File)||file.size>3145728||file.size<50||!validPhotoType(photoType))return response({error:"Fichier invalide : choisissez Avant, Après ménage ou Incident"},400);
   const job=admin?
-   await db.sql`select id,status from aurea_ops_jobs where id=${jobId}::uuid and status in ('in_progress','qa')`:
-   await db.sql`select id,status from aurea_ops_jobs where id=${jobId}::uuid
+   await db.sql`select id,status,started_at from aurea_ops_jobs where id=${jobId}::uuid and status in ('in_progress','qa')`:
+   await db.sql`select id,status,started_at from aurea_ops_jobs where id=${jobId}::uuid
     and team_id=${field.team_id}::uuid and status='in_progress'`;
   if(!job.length)return response({error:"Intervention non ouverte au contrôle qualité"},409);
+  if(photoType==="after"&&!job[0].started_at)return response({error:"Démarrez et horodatez le ménage avant de déposer une photo après ménage"},409);
   const count=await db.sql`select count(*)::int as n from aurea_ops_job_photos where job_id=${jobId}::uuid`;
   if(Number(count[0].n)>=8)return response({error:"Maximum de huit photos par intervention"},409);
   const bytes=new Uint8Array(await file.arrayBuffer()),mime=detectImage(bytes);
   if(!mime)return response({error:"Image JPEG, PNG ou WebP valide requise (3 Mo maximum)"},415);
   const key="ops/"+jobId+"/"+randomUUID();
   await getStore(storeName).set(key,bytes.buffer,{metadata:{mime}});
-  const rows=await db.sql`insert into aurea_ops_job_photos(job_id,blob_key,mime,bytes,caption) values(${jobId}::uuid,${key},${mime},${bytes.byteLength},${caption}) returning id,mime,caption,created_at`;
-  await db.sql`insert into aurea_ops_job_events(job_id,actor,event,detail) values(${jobId}::uuid,${admin?'admin':'field'},'photo_added',${JSON.stringify({caption,agentId:field?.id||null})}::jsonb)`;
+  const rows=await db.sql`insert into aurea_ops_job_photos(job_id,blob_key,mime,bytes,caption,photo_type) values(${jobId}::uuid,${key},${mime},${bytes.byteLength},${caption},${photoType}) returning id,mime,photo_type,caption,created_at`;
+  await db.sql`insert into aurea_ops_job_events(job_id,actor,event,detail) values(${jobId}::uuid,${admin?'admin':'field'},'photo_added',${JSON.stringify({caption,photoType,agentId:field?.id||null})}::jsonb)`;
   return response({photo:rows[0]},201);
  }catch(e){
   console.error("aurea-ops-photo",e?.code||"failed");

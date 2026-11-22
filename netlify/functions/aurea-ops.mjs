@@ -1,6 +1,7 @@
 import {getDatabase} from "@netlify/database";
 import {isAuthorized,sameOrigin,response} from "../../lib/aurea-auth.mjs";
 import {hostId,UUID,hashPassword,newHostPassword,validTurnover,validTransition,qualityComplete} from "../../lib/aurea-ops-core.mjs";
+import {encryptLockCode,decryptLockCode,validLockCode} from "../../lib/aurea-property-security.mjs";
 
 const clean=(v,max=150)=>typeof v==="string"?v.trim().slice(0,max):"";
 const identifier=(v)=>UUID.test(String(v||""));
@@ -10,6 +11,7 @@ const failure=(e)=>{
  if(e?.code==="23P01")return response({error:"Créneau indisponible : ce logement ou cette équipe est déjà réservé(e)."},409);
  if(e?.code==="23505")return response({error:"Un enregistrement avec ce nom ou cet e-mail existe déjà."},409);
  if(e?.code==="23503")return response({error:"Référence invalide."},409);
+ if(e?.code==="23514")return response({error:"Le mode serrure à code nécessite un code enregistré."},409);
  return response({error:"Opération indisponible. Vérifiez la base et ses migrations."},503);
 };
 async function actorFor(req,db){
@@ -23,17 +25,18 @@ async function actorFor(req,db){
 }
 function propData(body){
  const name=clean(body.name,120),address=clean(body.address,350);
+ const accessMethod=clean(body.access_method||"other",20);
  const latitude=body.latitude===""||body.latitude===null||body.latitude===undefined?null:Number(body.latitude);
  const longitude=body.longitude===""||body.longitude===null||body.longitude===undefined?null:Number(body.longitude);
  const bedrooms=Number(body.bedrooms??1),bathrooms=Number(body.bathrooms??1);
  const surface=body.surface_m2===""||body.surface_m2===undefined||body.surface_m2===null?null:Number(body.surface_m2);
- if(name.length<2||address.length<8||![latitude,longitude].every(x=>x===null||Number.isFinite(x))||
+ if(name.length<2||address.length<8||!["code","key","other"].includes(accessMethod)||![latitude,longitude].every(x=>x===null||Number.isFinite(x))||
   latitude!==null&&(latitude< -90||latitude>90)||longitude!==null&&(longitude< -180||longitude>180)||
   (latitude===null)!==(longitude===null)||
   !Number.isInteger(bedrooms)||bedrooms<0||bedrooms>40||
   !Number.isInteger(bathrooms)||bathrooms<0||bathrooms>40||
   surface!==null&&(!Number.isInteger(surface)||surface<=0||surface>10000))return null;
- return {name,address,latitude,longitude,bedrooms,bathrooms,surface,
+ return {name,address,accessMethod,latitude,longitude,bedrooms,bathrooms,surface,
   access:clean(body.access_notes,1000),linen:clean(body.linen_notes,800),consumables:clean(body.consumables_notes,800)};
 }
 export default async function handler(req){
@@ -47,8 +50,8 @@ export default async function handler(req){
    if(resource==="session")return response({role:actor.role,companyId:actor.companyId,name:actor.companyName||"Auréa Operations"});
    if(resource==="overview"){
     const companies=admin?await db.sql`select id,name,email,contact_name,phone,active,created_at from aurea_ops_companies order by created_at desc limit 300`:[];
-    const properties=admin?await db.sql`select p.*,c.name as company_name from aurea_ops_properties p join aurea_ops_companies c on c.id=p.company_id order by p.name limit 600`:
-     await db.sql`select * from aurea_ops_properties where company_id=${actor.companyId}::uuid order by name limit 600`;
+    const properties=admin?await db.sql`select p.id,p.company_id,p.name,p.address,p.latitude,p.longitude,p.bedrooms,p.bathrooms,p.surface_m2,p.access_method,p.access_notes,p.linen_notes,p.consumables_notes,p.active,p.created_at,p.updated_at,(p.lock_code_ciphertext is not null) as lock_configured,c.name as company_name from aurea_ops_properties p join aurea_ops_companies c on c.id=p.company_id order by p.name limit 600`:
+     await db.sql`select id,company_id,name,address,latitude,longitude,bedrooms,bathrooms,surface_m2,access_method,access_notes,linen_notes,consumables_notes,active,created_at,updated_at,(lock_code_ciphertext is not null) as lock_configured from aurea_ops_properties where company_id=${actor.companyId}::uuid order by name limit 600`;
     const teams=admin?await db.sql`select id,name,active from aurea_ops_teams order by name limit 120`:[];
     const agents=admin?await db.sql`select a.id,a.full_name,a.email,a.team_id,a.active,a.created_at,t.name as team_name from aurea_ops_agents a join aurea_ops_teams t on t.id=a.team_id order by a.created_at desc limit 300`:[];
     const incidents=admin?await db.sql`select e.job_id,e.created_at,e.detail,p.name as property_name,c.name as company_name
@@ -60,6 +63,34 @@ export default async function handler(req){
      await db.sql`select j.*,p.name as property_name,p.address as property_address,p.latitude,p.longitude from aurea_ops_jobs j join aurea_ops_properties p on p.id=j.property_id where j.company_id=${actor.companyId}::uuid and j.start_at>=now()-interval '30 days' and j.start_at<=now()+interval '180 days' order by j.start_at limit 1000`;
     return response({companies,properties,teams,agents,incidents,jobs,role:actor.role});
    }
+   if(resource==="property_detail"||resource==="lock_code"){
+    const id=url.searchParams.get("property");
+    if(!identifier(id))return response({error:"Logement invalide"},400);
+    const rows=admin?await db.sql`select id,company_id,name,address,latitude,longitude,bedrooms,bathrooms,
+      surface_m2,access_method,access_notes,linen_notes,consumables_notes,active,created_at,updated_at,lock_code_ciphertext
+      from aurea_ops_properties where id=${id}::uuid limit 1`:
+     await db.sql`select id,company_id,name,address,latitude,longitude,bedrooms,bathrooms,
+      surface_m2,access_method,access_notes,linen_notes,consumables_notes,active,created_at,updated_at,lock_code_ciphertext
+      from aurea_ops_properties where id=${id}::uuid and company_id=${actor.companyId}::uuid limit 1`;
+    if(!rows.length)return response({error:"Logement non autorisé"},404);
+    const prop=rows[0],lock_configured=Boolean(prop.lock_code_ciphertext);
+    if(resource==="lock_code"){
+     if(!lock_configured)return response({error:"Aucun code de serrure renseigné"},404);
+     const code=decryptLockCode(prop.lock_code_ciphertext);
+     await db.sql`insert into aurea_ops_property_access_events(property_id,actor,actor_id,action)
+      values(${id}::uuid,${actor.role},${actor.companyId}::uuid,'code_viewed')`;
+     return response({code},200,{"Cache-Control":"private, no-store","Pragma":"no-cache","Vary":"Cookie","X-Content-Type-Options":"nosniff"});
+    }
+    const {lock_code_ciphertext,...property}=prop;
+    const jobs=await db.sql`select id,start_at,end_at,status,notes,started_at,qa_submitted_at,completed_at,
+      quality_notes,checklist,team_id from aurea_ops_jobs where property_id=${id}::uuid
+      and company_id=${prop.company_id}::uuid order by start_at desc limit 25`;
+    const photos=await db.sql`select f.id,f.job_id,f.photo_type,f.caption,f.created_at
+      from aurea_ops_job_photos f join aurea_ops_jobs j on j.id=f.job_id
+      where j.property_id=${id}::uuid and j.company_id=${prop.company_id}::uuid
+      order by f.created_at desc limit 80`;
+    return response({property:{...property,lock_configured},jobs,photos});
+   }
    if(resource==="history"){
     const id=url.searchParams.get("job");
     if(!identifier(id))return response({error:"Intervention invalide"},400);
@@ -67,7 +98,7 @@ export default async function handler(req){
       await db.sql`select id from aurea_ops_jobs where id=${id}::uuid and company_id=${actor.companyId}::uuid limit 1`;
     if(!rows.length)return response({error:"Introuvable"},404);
     const events=await db.sql`select event,actor,detail,created_at from aurea_ops_job_events where job_id=${id}::uuid order by created_at desc limit 100`;
-    const photos=await db.sql`select id,mime,caption,created_at from aurea_ops_job_photos where job_id=${id}::uuid order by created_at desc limit 30`;
+    const photos=await db.sql`select id,mime,photo_type,caption,created_at from aurea_ops_job_photos where job_id=${id}::uuid order by created_at desc limit 30`;
     return response({events,photos});
    }
    return response({error:"Ressource inconnue"},404);
@@ -132,14 +163,40 @@ export default async function handler(req){
     if(!identifier(companyId))return response({error:"Sélectionnez une conciergerie"},400);
     const exists=await db.sql`select id from aurea_ops_companies where id=${companyId}::uuid and active=true`;
     if(!exists.length)return response({error:"Conciergerie introuvable"},404);
-    const rows=await db.sql`insert into aurea_ops_properties(company_id,name,address,latitude,longitude,bedrooms,bathrooms,surface_m2,access_notes,linen_notes,consumables_notes)
-      values(${companyId}::uuid,${data.name},${data.address},${data.latitude},${data.longitude},${data.bedrooms},${data.bathrooms},${data.surface},${data.access},${data.linen},${data.consumables}) returning id`;
+    const hasLock=typeof body.lock_code==="string"&&body.lock_code.length>0;
+    if(hasLock&&!validLockCode(body.lock_code))return response({error:"Code de serrure invalide (3 à 64 caractères, sans espaces de bord)"},400);
+    if(data.accessMethod==="code"&&!hasLock)return response({error:"Pour une serrure à code, l’hôte doit renseigner le code d’accès"},400);
+    const encrypted=hasLock?encryptLockCode(body.lock_code):null;
+    const rows=await db.sql`insert into aurea_ops_properties(company_id,name,address,latitude,longitude,bedrooms,bathrooms,surface_m2,access_notes,linen_notes,consumables_notes,access_method,lock_code_ciphertext,lock_code_updated_at)
+      values(${companyId}::uuid,${data.name},${data.address},${data.latitude},${data.longitude},${data.bedrooms},${data.bathrooms},${data.surface},${data.access},${data.linen},${data.consumables},${data.accessMethod},${encrypted},case when ${encrypted}::text is null then null else now() end) returning id`;
+    if(hasLock)await db.sql`insert into aurea_ops_property_access_events(property_id,actor,actor_id,action)
+      values(${rows[0].id}::uuid,${actor.role},${actor.companyId}::uuid,'code_updated')`;
     return response({property:rows[0]},201);
    }
    if(!identifier(body.propertyId))return response({error:"Logement invalide"},400);
-   const rows=admin?await db.sql`update aurea_ops_properties set name=${data.name},address=${data.address},latitude=${data.latitude},longitude=${data.longitude},bedrooms=${data.bedrooms},bathrooms=${data.bathrooms},surface_m2=${data.surface},access_notes=${data.access},linen_notes=${data.linen},consumables_notes=${data.consumables},updated_at=now() where id=${body.propertyId}::uuid returning id`:
-    await db.sql`update aurea_ops_properties set name=${data.name},address=${data.address},latitude=${data.latitude},longitude=${data.longitude},bedrooms=${data.bedrooms},bathrooms=${data.bathrooms},surface_m2=${data.surface},access_notes=${data.access},linen_notes=${data.linen},consumables_notes=${data.consumables},updated_at=now() where id=${body.propertyId}::uuid and company_id=${actor.companyId}::uuid returning id`;
+   if(body.lock_code!==undefined&&body.lock_code!==""&&!validLockCode(body.lock_code))
+    return response({error:"Code de serrure invalide (3 à 64 caractères)"},400);
+   const encrypted=body.lock_code?encryptLockCode(body.lock_code):null;
+
+   const rows=admin?await db.sql`update aurea_ops_properties set name=${data.name},address=${data.address},latitude=${data.latitude},longitude=${data.longitude},bedrooms=${data.bedrooms},bathrooms=${data.bathrooms},surface_m2=${data.surface},access_notes=${data.access},linen_notes=${data.linen},consumables_notes=${data.consumables},access_method=${data.accessMethod},lock_code_ciphertext=coalesce(${encrypted},lock_code_ciphertext),lock_code_updated_at=case when ${encrypted}::text is null then lock_code_updated_at else now() end,updated_at=now() where id=${body.propertyId}::uuid returning id`:
+    await db.sql`update aurea_ops_properties set name=${data.name},address=${data.address},latitude=${data.latitude},longitude=${data.longitude},bedrooms=${data.bedrooms},bathrooms=${data.bathrooms},surface_m2=${data.surface},access_notes=${data.access},linen_notes=${data.linen},consumables_notes=${data.consumables},access_method=${data.accessMethod},lock_code_ciphertext=coalesce(${encrypted},lock_code_ciphertext),lock_code_updated_at=case when ${encrypted}::text is null then lock_code_updated_at else now() end,updated_at=now() where id=${body.propertyId}::uuid and company_id=${actor.companyId}::uuid returning id`;
+   if(rows.length&&encrypted)await db.sql`insert into aurea_ops_property_access_events(property_id,actor,actor_id,action)
+     values(${body.propertyId}::uuid,${actor.role},${actor.companyId}::uuid,'code_updated')`;
    return rows.length?response({property:rows[0]}):response({error:"Logement introuvable"},404);
+  }
+  if(action==="clear_lock_code"){
+   const id=body.propertyId;
+   if(!identifier(id))return response({error:"Logement invalide"},400);
+   const rows=admin?await db.sql`update aurea_ops_properties
+      set lock_code_ciphertext=null,lock_code_updated_at=now(),updated_at=now()
+      where id=${id}::uuid and access_method <> 'code' returning id`:
+      await db.sql`update aurea_ops_properties
+      set lock_code_ciphertext=null,lock_code_updated_at=now(),updated_at=now()
+      where id=${id}::uuid and company_id=${actor.companyId}::uuid and access_method <> 'code' returning id`;
+   if(!rows.length)return response({error:"Changez d’abord le mode d’accès pour supprimer le code de serrure"},409);
+   await db.sql`insert into aurea_ops_property_access_events(property_id,actor,actor_id,action)
+      values(${id}::uuid,${actor.role},${actor.companyId}::uuid,'code_removed')`;
+   return response({property:rows[0]});
   }
   if(action==="request_job"){
    if(!identifier(body.propertyId)||!validTurnover(body.start,body.end,body.checkout,body.checkin))return response({error:"Choisissez un logement et un créneau futur de 30 minutes à 12 heures."},400);
@@ -181,13 +238,14 @@ export default async function handler(req){
    if(to==="assigned" && !identifier(j.team_id))return response({error:"Aucune équipe réservée pour cette prestation"},409);
    if(to==="completed"){
     if(!qualityComplete(j.checklist))return response({error:"Checklist qualité incomplète"},409);
-    const photos=await db.sql`select count(*)::int as total from aurea_ops_job_photos where job_id=${id}::uuid`;
-    if(Number(photos[0]?.total||0)<1)return response({error:"Au moins une photo de contrôle est obligatoire"},409);
+    const photos=await db.sql`select count(*)::int as total from aurea_ops_job_photos
+      where job_id=${id}::uuid and photo_type='after' and created_at >= ${j.started_at}::timestamptz`;
+    if(Number(photos[0]?.total||0)<1)return response({error:"Validation impossible : ajoutez au moins une photo APRÈS ménage, horodatée après son démarrage"},409);
    }
    const teamId=to==="confirmed"?body.teamId:j.team_id||null;
    const updated=to==="confirmed"?
     await db.sql`update aurea_ops_jobs set status=${to},team_id=${teamId}::uuid,updated_at=now() where id=${id}::uuid and status=${j.status} returning id,status`:
-    await db.sql`update aurea_ops_jobs set status=${to},updated_at=now(),completed_at=case when ${to}='completed' then now() else completed_at end where id=${id}::uuid and status=${j.status} returning id,status`;
+    await db.sql`update aurea_ops_jobs set status=${to},updated_at=now(),started_at=case when ${to}='in_progress' then coalesce(started_at,now()) else started_at end,completed_at=case when ${to}='completed' then now() else completed_at end where id=${id}::uuid and status=${j.status} returning id,status`;
    if(!updated.length)return response({error:"L'intervention a changé. Rechargez le planning."},409);
    await db.sql`insert into aurea_ops_job_events(job_id,actor,event,detail) values(${id}::uuid,${actor.role},${to},${JSON.stringify({from:j.status,teamId:teamId||null})}::jsonb)`;
    return response({job:updated[0]});

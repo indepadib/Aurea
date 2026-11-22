@@ -26,6 +26,7 @@ jobs:
       - run: node --check netlify/functions/aurea-field-login.mjs
       - run: node --check netlify/functions/aurea-field.mjs
       - run: node --check ops/console.js
+      - run: node --check lib/aurea-property-security.mjs
       - run: node --check lib/aurea-ops-core.mjs
       - run: node --check netlify/functions/aurea-ops.mjs
       - run: node --check netlify/functions/aurea-host-login.mjs
