@@ -1,6 +1,6 @@
 import {getDatabase} from "@netlify/database";
 import {isAuthorized,sameOrigin,response} from "../../lib/aurea-auth.mjs";
-import {hostId,UUID,hashPassword,newHostPassword,validSlot,validTransition,qualityComplete} from "../../lib/aurea-ops-core.mjs";
+import {hostId,UUID,hashPassword,newHostPassword,validTurnover,validTransition,qualityComplete} from "../../lib/aurea-ops-core.mjs";
 
 const clean=(v,max=150)=>typeof v==="string"?v.trim().slice(0,max):"";
 const identifier=(v)=>UUID.test(String(v||""));
@@ -108,15 +108,28 @@ export default async function handler(req){
    return rows.length?response({property:rows[0]}):response({error:"Logement introuvable"},404);
   }
   if(action==="request_job"){
-   if(!identifier(body.propertyId)||!validSlot(body.start,body.end))return response({error:"Choisissez un logement et un créneau futur de 30 minutes à 12 heures."},400);
+   if(!identifier(body.propertyId)||!validTurnover(body.start,body.end,body.checkout,body.checkin)return response({error:"Choisissez un logement et un créneau futur de 30 minutes à 12 heures."},400);
    const prop=admin?await db.sql`select id,company_id from aurea_ops_properties where id=${body.propertyId}::uuid and active=true`:
     await db.sql`select id,company_id from aurea_ops_properties where id=${body.propertyId}::uuid and company_id=${actor.companyId}::uuid and active=true`;
    if(!prop.length)return response({error:"Logement non autorisé"},404);
    const companyId=prop[0].company_id,notes=clean(body.notes,1400);
    const start=new Date(body.start).toISOString(),end=new Date(body.end).toISOString();
-   const rows=await db.sql`insert into aurea_ops_jobs(company_id,property_id,start_at,end_at,notes) values(${companyId}::uuid,${body.propertyId}::uuid,${start}::timestamptz,${end}::timestamptz,${notes}) returning id,status`;
+   const checkout=body.checkout?new Date(body.checkout).toISOString():null,checkin=body.checkin?new Date(body.checkin).toISOString():null;
+   const rows=await db.sql`insert into aurea_ops_jobs(company_id,property_id,start_at,end_at,checkout_at,next_checkin_at,notes) values(${companyId}::uuid,${body.propertyId}::uuid,${start}::timestamptz,${end}::timestamptz,${checkout}::timestamptz,${checkin}::timestamptz,${notes}) returning id,status`;
    await db.sql`insert into aurea_ops_job_events(job_id,actor,event) values(${rows[0].id}::uuid,${actor.role},'requested')`;
    return response({job:rows[0]},201);
+  }
+  if(action==="reschedule_job"){
+   const id=body.jobId;
+   if(!identifier(id)||!validTurnover(body.start,body.end,body.checkout,body.checkin))return response({error:"Créneau ou heures de rotation invalides"},400);
+   const start=new Date(body.start).toISOString(),end=new Date(body.end).toISOString();
+   const checkout=body.checkout?new Date(body.checkout).toISOString():null,checkin=body.checkin?new Date(body.checkin).toISOString():null,notes=clean(body.notes,1400);
+   const rows=admin?
+    await db.sql`update aurea_ops_jobs set start_at=${start}::timestamptz,end_at=${end}::timestamptz,checkout_at=${checkout}::timestamptz,next_checkin_at=${checkin}::timestamptz,notes=${notes},updated_at=now() where id=${id}::uuid and status='requested' returning id`:
+    await db.sql`update aurea_ops_jobs set start_at=${start}::timestamptz,end_at=${end}::timestamptz,checkout_at=${checkout}::timestamptz,next_checkin_at=${checkin}::timestamptz,notes=${notes},updated_at=now() where id=${id}::uuid and company_id=${actor.companyId}::uuid and status='requested' returning id`;
+   if(!rows.length)return response({error:"Modification possible uniquement avant confirmation"},409);
+   await db.sql`insert into aurea_ops_job_events(job_id,actor,event,detail) values(${id}::uuid,${actor.role},'rescheduled',${JSON.stringify({start,end,checkout,checkin})}::jsonb)`;
+   return response({job:rows[0]});
   }
   if(action==="change_job"){
    const id=body.jobId,to=clean(body.status,35);
