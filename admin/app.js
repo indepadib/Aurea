@@ -267,7 +267,7 @@ async function onFormSubmit(event){
   event.preventDefault();
   const button=event.target.querySelector("button");button.disabled=true;button.textContent="Connexion…";
   try{
-   await api("/api/aurea-auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",password:new FormData(event.target).get("password")})});
+   await api("/api/aurea-auth",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"login",password:new FormData(event.target).get("password"),remember:new FormData(event.target).get("remember")==="on"})});
    state.authenticated=true;shell();navigate(location.hash.slice(1)||"dashboard");await loadAll();
   }catch(e){showLogin(e.message);}
   return;
