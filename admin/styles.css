@@ -113,3 +113,14 @@
 .campaign-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .campaign-links .btn{white-space:normal}
 @media(max-width:850px){.acq-layout{grid-template-columns:1fr}.acq-side{border-left:0;border-top:1px solid var(--line);padding:19px 0 0}}
+
+/* Commercial showcase cards in outreach composer; no real client data displayed. */
+.outreach-product-preview{margin:15px 0 19px;border:1px solid #C9DED3;background:#F4F9F5;border-radius:17px;padding:17px}
+.outreach-product-preview>strong{display:block;color:#184D39;font-size:13px;line-height:1.4}
+.outreach-product-preview>p{color:#647A6B;font-size:11px;line-height:1.5;margin:7px 0 12px}
+.outreach-product-shots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.outreach-product-shots a{min-width:0;border:1px solid #D6E5DA;border-radius:11px;overflow:hidden;background:#FFF;text-decoration:none;color:#14573D;font-size:11px;font-weight:700}
+.outreach-product-shots img{width:100%;aspect-ratio:1200/735;object-fit:cover;display:block;border-bottom:1px solid #E4ECE5}
+.outreach-product-shots span{display:block;padding:9px 10px;line-height:1.35}
+.outreach-showcase-link{display:inline-block;margin-top:12px;font-size:12px;color:#206F4F;font-weight:800;text-decoration:underline;text-underline-offset:3px}
+@media(max-width:640px){.outreach-product-shots{grid-template-columns:1fr}.outreach-product-shots a{display:flex;align-items:center}.outreach-product-shots img{width:115px;aspect-ratio:1200/735;border-bottom:none;border-right:1px solid #E4ECE5}.outreach-product-shots span{padding:10px}}
