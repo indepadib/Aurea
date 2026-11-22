@@ -87,9 +87,16 @@ function dashboard(){
  const margin=leads.reduce((s,x)=>s+Number(x.data.revenue||0)-Number(x.data.variableCost||0),0);
  const siteNew=leads.filter(x=>x.data.source==="Site Auréa"&&x.data.status==="Nouveau");
  const kpis=[
-  ["Prospects B2B",prospects.length,"Base commerciale"],["Demandes entrantes",leads.length,"Hosts, Home et Sécurité"],
-  ["Demandes du site à traiter",siteNew.length,"À qualifier et rappeler"],["CA déclaré",money(ca),"Marge estimée "+money(margin)]
+  ["Prospects B2B",prospects.length,"Base de qualification"],["Demandes entrantes",leads.length,"Tous canaux"],
+  ["Demandes site à traiter",siteNew.length,"À qualifier et rappeler"],["Clients confirmés",active,"Réservés / signés"],
+  ["CA déclaré",money(ca),"Marge estimée "+money(margin)]
  ];
+ const today=new Date().toISOString().slice(0,10);
+ const due=[...state.cache.prospect,...state.cache.lead,...state.cache.partner]
+  .filter(x=>x.data.nextDate&&x.data.nextDate<=today&&!["Client","Perdu","Sans suite","Écarté"].includes(x.data.status))
+  .sort((a,b)=>String(a.data.nextDate).localeCompare(String(b.data.nextDate))).slice(0,6);
+ const dueBlock=due.length?'<section class="panel due-panel"><h2>À relancer maintenant</h2><p class="sub">Actions en retard ou arrivées à échéance — aucune relance automatique.</p><div class="due-grid">'+due.map(x=>'<div class="due-item"><div><strong>'+html(x.data.name)+'</strong><small>'+html(x.data.nextAction||"Préciser la prochaine action")+' · '+html(x.data.nextDate)+'</small></div><button class="btn secondary small" data-action="dossier" data-kind="'+html(x.kind)+'" data-id="'+html(x.id)+'">Ouvrir →</button></div>').join("")+'</div></section>':'';
+
  const statuses=["Nouveau","Qualifié","Devis envoyé","Réservé","Client"];
  const counts=statuses.map(s=>leads.filter(x=>x.data.status===s).length);
  const max=Math.max(...counts,1);
@@ -98,7 +105,7 @@ function dashboard(){
  })).sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")).slice(0,6);
  return layoutTitle("Vue d’ensemble","Une vision claire de votre activité commerciale et de la prochaine action à entreprendre.",'<button class="btn green" data-action="add" data-kind="lead">+ Nouvelle demande</button>')+
  (siteNew.length?'<section class="site-alert"><div><strong>'+siteNew.length+' demande(s) reçue(s) via le site à traiter</strong><p>Ouvrez les demandes, vérifiez le besoin et préparez un devis. Aucun message n’est envoyé automatiquement.</p></div><button class="btn green small" data-view="lead">Traiter les demandes →</button></section>':'')+
- '<div class="grid4">'+kpis.map(k=>'<article class="kpi"><span class="klabel">'+html(k[0])+'</span><span class="number">'+html(k[1])+'</span><small>'+html(k[2])+'</small></article>').join("")+'</div>'+
+ '<div class="grid5">'+kpis.map(k=>'<article class="kpi"><span class="klabel">'+html(k[0])+'</span><span class="number">'+html(k[1])+'</span><small>'+html(k[2])+'</small></article>').join("")+'</div>'+dueBlock+
  '<div class="dash-grid"><section class="panel"><h2>Pipeline de conversion</h2><p class="sub">Demandes par étape, mises à jour depuis les fiches clients.</p><div class="pipeline">'+statuses.map((s,i)=>'<div class="pipeline-row"><span>'+html(s)+'</span><div class="bar"><i style="width:'+counts[i]/max*100+'%"></i></div><strong>'+counts[i]+'</strong></div>').join("")+'</div><p class="section-caption">Un client apparaît dans son statut actuel, pas dans toutes les étapes précédentes.</p></section>'+
  '<section class="panel"><h2>Prochaines actions</h2><p class="sub">Relances, rendez-vous et tâches prioritaires.</p>'+
  (next.length?next.map(x=>'<div class="next-item"><div><b>'+html(x.name)+'</b><small>'+html(x.action)+'</small></div><span class="pill-date">'+html(x.date||"À planifier")+'</span></div>').join(""):'<div class="empty"><div class="empty-icon">✦</div><h3>Tout commence ici</h3><p>Ajoutez un prospect ou une tâche pour préparer vos premières actions commerciales.</p><button class="btn secondary" data-action="add" data-kind="prospect">+ Ajouter un prospect</button></div>')+
