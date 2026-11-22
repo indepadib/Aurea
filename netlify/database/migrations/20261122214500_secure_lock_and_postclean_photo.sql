@@ -1,5 +1,8 @@
 -- Lock codes are never stored in plaintext. Photo type is mandatory for every new proof.
 alter table aurea_ops_properties add column if not exists lock_code_ciphertext text;
+alter table aurea_ops_properties add column if not exists access_method text not null default 'other';
+alter table aurea_ops_properties add constraint aurea_ops_properties_access_method_check check (access_method in ('code','key','other'));
+alter table aurea_ops_properties add constraint aurea_ops_properties_code_required_check check (access_method <> 'code' or lock_code_ciphertext is not null);
 alter table aurea_ops_properties add column if not exists lock_code_updated_at timestamptz;
 alter table aurea_ops_job_photos add column if not exists photo_type text not null default 'legacy';
 alter table aurea_ops_job_photos add constraint aurea_ops_job_photos_type_check
