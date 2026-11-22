@@ -32,6 +32,15 @@ const params=new URLSearchParams(location.search);
 const cleanSource=s=>allowedSource.test(String(s||""))?s:"";
 const source=[cleanSource(params.get("utm_source")),cleanSource(params.get("utm_campaign"))].filter(Boolean).join(" / ");
 form.elements.source_campagne.value=source||"Accès direct";
+const metricSource=(cleanSource(params.get("utm_source"))||"direct")+"-"+(cleanSource(params.get("utm_campaign"))||"standard");
+const metricSent=new Set();
+function track(stage){
+ if(metricSent.has(stage))return;
+ metricSent.add(stage);
+ const segment=choice==="hosts"?"HOSTS":choice==="home"?"HOME":choice==="syndic"?"SECURITE":"INCONNU";
+ fetch("/api/aurea-funnel",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",keepalive:true,
+  body:JSON.stringify({stage,segment,source:metricSource.slice(0,70)})}).catch(()=>{});
+}
 const sourceType=String(params.get("type")||"").toLowerCase();
 let choice=serviceConfigs[sourceType]?sourceType:"";
 let stage=1,submitting=false;
@@ -87,6 +96,7 @@ function chooseService(type,advance=true){
  }));
  byId("securityNote").hidden=type!=="syndic";
  next.disabled=false;
+ track("choix");
  if(advance)renderStage(2);
 }
 document.querySelectorAll("[data-type]").forEach(btn=>btn.addEventListener("click",()=>chooseService(btn.dataset.type)));
@@ -98,10 +108,16 @@ next.addEventListener("click",()=>{
   if(form.elements.ville.value.trim().length<3)return renderError("Renseignez une localisation suffisamment précise.");
   const selected=[...document.querySelectorAll(".service-option:checked")].map(el=>el.value);
   form.elements.options.value=selected.join(" ; ");
-  renderStage(3);
+  track("besoin");renderStage(3);
  }
 });
 back.addEventListener("click",()=>renderStage(Math.max(1,stage-1)));
+let contactStarted=false;
+byId("step3").addEventListener("input",event=>{
+ if(!contactStarted&&["nom","telephone","email"].includes(event.target.name)){
+  contactStarted=true;track("contact");
+ }
+});
 byId("preference_contact").addEventListener("change",()=>{
  const useEmail=form.elements.preference_contact.value==="Email";
  form.elements.email.required=useEmail;
@@ -128,8 +144,10 @@ form.addEventListener("submit",async e=>{
  try{
   const result=await fetch("/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams(new FormData(form)).toString(),credentials:"same-origin"});
   if(!result.ok)throw new Error("La demande n'a pas été reçue. Veuillez réessayer.");
+  track("soumis");
   renderStage("success");
  }catch(err){renderError("L'envoi a échoué. Vérifiez votre connexion et réessayez, sans créer une deuxième demande.");}
  finally{submitting=false;send.disabled=false;send.textContent="Envoyer ma demande →";}
 });
 renderStage(1);
+track("vue");
