@@ -3,9 +3,9 @@ import {isAuthorized,sameOrigin,response} from "../../lib/aurea-auth.mjs";
 
 const kinds=new Set(["prospect","lead","partner","content","task"]);
 const fields={
- prospect:["name","segment","zone","evidence","priority","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent"],
+ prospect:["name","segment","zone","evidence","priority","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent","contactedAt","lastContactChannel"],
  lead:["name","segment","zone","service","status","source","nextAction","nextDate","owner","notes","email","phone","quote","revenue","variableCost","consent"],
- partner:["name","segment","zone","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent"],
+ partner:["name","segment","zone","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent","contactedAt","lastContactChannel"],
  content:["name","segment","channel","format","date","status","cta","copy","owner","notes"],
  task:["name","segment","status","priority","dueDate","owner","notes"]
 };
@@ -47,7 +47,7 @@ export default async function handler(req){
   }
   const id=url.searchParams.get("id");
   if(!/^[0-9a-f-]{36}$/i.test(id||""))return response({error:"Identifiant invalide"},400);
-  const rows=await db.sql`update aurea_crm_records set data=${JSON.stringify(data)}::jsonb,updated_at=now() where id=${id}::uuid and kind=${kind} returning id,kind,data,created_at,updated_at`;
+  const rows=await db.sql`update aurea_crm_records set data=data || ${JSON.stringify(data)}::jsonb,updated_at=now() where id=${id}::uuid and kind=${kind} returning id,kind,data,created_at,updated_at`;
   return rows.length?response({item:rows[0]}):response({error:"Introuvable"},404);
  }catch(error){
   console.error("aurea-crm",error);
