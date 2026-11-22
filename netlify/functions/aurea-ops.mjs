@@ -167,6 +167,19 @@ export default async function handler(req){
    await db.sql`insert into aurea_ops_job_events(job_id,actor,event,detail) values(${body.jobId}::uuid,'admin','reassigned',${JSON.stringify({teamId:body.teamId})}::jsonb)`;
    return response({job:rows[0]});
   }
+  if(action==="report_incident"){
+   const id=body.jobId,note=clean(body.note,1400),severity=clean(body.severity,20);
+   if(!identifier(id)||note.length<10||!["low","medium","high","critical"].includes(severity))
+    return response({error:"Précisez l'incident et sa gravité"},400);
+   const found=admin?
+    await db.sql`select id from aurea_ops_jobs where id=${id}::uuid limit 1`:
+    await db.sql`select id from aurea_ops_jobs where id=${id}::uuid and company_id=${actor.companyId}::uuid limit 1`;
+   if(!found.length)return response({error:"Intervention introuvable"},404);
+   const result=await db.sql`insert into aurea_ops_job_events(job_id,actor,event,detail)
+    values(${id}::uuid,${actor.role},'incident_reported',${JSON.stringify({severity,note})}::jsonb)
+    returning id,created_at`;
+   return response({incident:result[0]},201);
+  }
   if(action==="quality"){
    if(!admin||!identifier(body.jobId))return response({error:"Accès réservé à Auréa"},403);
    if(!body.checklist||typeof body.checklist!=="object"||Array.isArray(body.checklist))return response({error:"Checklist requise"},400);
