@@ -15,7 +15,7 @@ const sections={
     ["nextAction","Prochaine action"],["nextDate","Date prévue","date"],["owner","Responsable"],
     ["email","E-mail","email"],["phone","Téléphone","tel"],
     ["quote","Devis (DH)","number"],["revenue","CA réalisé (DH)","number"],["variableCost","Coût variable (DH)","number"],
-    ["consent","Base de contact","select",false,["Demande entrante","Consentement obtenu","Ne pas solliciter"]],
+    ["consent","Base de contact","select",false,["À déterminer","Demande entrante","Consentement obtenu","Ne pas solliciter"]],
     ["notes","Notes","textarea"]]},
   partner:{title:"Partenaires",subtitle:"Pressings, agents immobiliers, blanchisseries et apporteurs d'affaires.",singular:"partenaire",icon:"◇",columns:["name","segment","zone","status","nextAction"],fields:[
     ["name","Nom de l'entreprise","text",true],["segment","Type de partenariat","select",false,["Blanchisserie","Pressing","Agence immobilière","Conciergerie","Apporteur d'affaires","Autre"]],
@@ -203,10 +203,12 @@ async function onClick(event){
  if(action==="add"){openModal(kind,null,kind==="lead"?{status:"Nouveau",source:"Autre"}:kind==="prospect"?{status:"À qualifier",consent:"À déterminer"}:{});return;}
  if(action==="convert"){
   const prospect=state.cache.prospect.find(x=>x.id===id);if(!prospect)return;
+   const existing=state.cache.lead.find(x=>x.data.source==="Prospection B2B"&&x.data.name.toLowerCase()===prospect.data.name.toLowerCase());
+   if(existing){navigate("lead");openModal("lead",existing);toast("Cette entreprise a déjà une demande : fiche existante ouverte");return;}
   openModal("lead",null,{
    name:prospect.data.name,segment:"HOSTS",zone:prospect.data.zone,
    source:"Prospection B2B",status:"Nouveau",
-   consent:prospect.data.consent==="Demande entrante"?"Demande entrante":"Ne pas solliciter",
+   consent:prospect.data.consent==="Demande entrante"?"Demande entrante":"À déterminer",
    nextAction:"Qualifier l’intérêt B2B avant proposition",
    notes:"Créée depuis le prospect B2B : "+prospect.data.name+"\n"+(prospect.data.evidence||""),
    email:prospect.data.email||"",phone:prospect.data.phone||""
