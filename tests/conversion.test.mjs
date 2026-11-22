@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 import {mapFormSubmission} from "../lib/aurea-form.mjs";
 import {funnelCounts,publicFunnelLink} from "../admin/funnel-ui.js";
 import {issueCookie,isAuthorized} from "../lib/aurea-auth.mjs";
+import {contactLinks} from "../admin/outreach.js";
 globalThis.Netlify={env:{get:key=>({
  AUREA_ADMIN_PASSWORD:"local-test-very-long-admin-password",
  AUREA_SESSION_SECRET:"local-test-independent-32-char-session-secret"
@@ -46,6 +47,14 @@ test("campaign links are directed to the correct funnel and tracking source",()=
  assert.equal(url.searchParams.get("type"),"syndic");
  assert.equal(url.searchParams.get("utm_source"),"facebook");
  assert.equal(url.searchParams.get("utm_campaign"),"aurea-growth");
+});
+test("WhatsApp draft is offered only for consented inbound lead",()=>{
+ const common={name:"Demandeur",phone:"06 63 21 56 26",service:"Ménage Zenata"};
+ const good=contactLinks({...common,consent:"Demande entrante"},"lead");
+ assert.match(good.whatsapp,/^https:\/\/wa.me\/212663215626\?text=/);
+ assert.match(decodeURIComponent(good.whatsapp),/Bonjour Demandeur/);
+ assert.equal(contactLinks({...common,consent:"Ne pas solliciter"},"lead").whatsapp,"");
+ assert.equal(contactLinks({...common,consent:"Demande entrante"},"prospect").whatsapp,"");
 });
 test("aggregate funnel stage events without implying unique visitors",()=>{
  const v=funnelCounts([{stage:"vue",segment:"HOSTS",hits:17},{stage:"soumis",segment:"HOSTS",hits:3},{stage:"vue",segment:"SECURITE",hits:4},{stage:"erreur",segment:"HOME",hits:7}]);
