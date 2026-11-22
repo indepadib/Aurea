@@ -298,6 +298,7 @@ async function onFormSubmit(event){
   }
   document.getElementById("modalOverlay")?.remove();
   toast("Fiche enregistrée");if(kind==="lead"&&state.current==="prospect")navigate("lead");await loadAll();
+  if(document.getElementById("dossierOverlay") && (id||saved.item?.id))await openDossier(kind,id||saved.item.id);
  }catch(e){button.disabled=false;button.textContent="Enregistrer →";toast(e.message,true);}
 }
 async function onClick(event){
