@@ -2,6 +2,7 @@ import { isSecurityTarget, contactLinks } from "./outreach.js";
 import { renderScopeTabs, renderContactDirectory } from "./outreach-view.js";
 import { composeOutreach, createMailLinks } from "./outreach.js";
 import { renderLeadWorkspace, renderDossier, renderComposeModal, renderActivityModal } from "./sales-ui.js";
+import { renderFunnelDashboard, renderCampaignLinks, publicFunnelLink } from "./funnel-ui.js";
 const sections={
   prospect:{title:"Prospects B2B",subtitle:"Conciergeries, syndics, résidences et contacts B2B qualifiés pour Zenata.",singular:"prospect",icon:"◎",columns:["name","segment","zone","priority","status","sourceUrl","nextAction"],fields:[
     ["name","Entreprise / prospect","text",true],["segment","Segment","select",false,["Conciergerie","Hôte multi-logements","Agence immobilière","Gestionnaire de résidence","Syndic professionnel","Résidence / promoteur","Autre"]],
@@ -15,7 +16,7 @@ const sections={
     ["notes","Notes","textarea"]]},
   lead:{title:"Demandes & réservations",subtitle:"Des premiers messages jusqu'aux clients actifs et à leur marge.",singular:"demande",icon:"◉",columns:["name","segment","zone","source","status","quote","nextAction"],fields:[
     ["name","Nom client / entreprise","text",true],["segment","Service","select",false,["HOSTS","HOME","SECURITE","AUTRE"]],
-    ["zone","Résidence / zone"],["service","Besoin détaillé","textarea"],["status","Statut","select",false,["Nouveau","À qualifier","Contacté","Qualifié","En discussion","Rendez-vous","Devis envoyé","Négociation","Réservé","Client","Perdu"]],
+    ["zone","Résidence / zone"],["service","Besoin détaillé","textarea"],["serviceOptions","Prestations souhaitées","textarea"],["requestedDate","Date souhaitée","date"],["preferredContact","Contact préféré","select",false,["WhatsApp","Téléphone","Email"]],["sourceCampaign","Origine marketing (campagne)"],["status","Statut","select",false,["Nouveau","À qualifier","Contacté","Qualifié","En discussion","Rendez-vous","Devis envoyé","Négociation","Réservé","Client","Perdu"]],
     ["source","Origine","select",false,["Messenger","WhatsApp","Site Auréa","Instagram","Groupe Facebook","Partenaire","Prospection B2B","Autre"]],
     ["nextAction","Prochaine action"],["nextDate","Date prévue","date"],["owner","Responsable"],
     ["email","E-mail","email"],["phone","Téléphone","tel"],
@@ -48,7 +49,7 @@ const sections={
 const keys=Object.keys(sections);
 const fieldsMap={};for(const [k,section] of Object.entries(sections))fieldsMap[k]=Object.fromEntries(section.fields.map(f=>[f[0],f[1]]));
 const app=document.getElementById("app");
-const state={authenticated:false,configured:false,current:"dashboard",cache:{prospect:[],lead:[],partner:[],content:[],task:[]},search:"",status:"",scope:"all",busy:false,error:""};
+const state={authenticated:false,configured:false,current:"dashboard",cache:{prospect:[],lead:[],partner:[],content:[],task:[]},search:"",status:"",scope:"all",busy:false,error:"",funnelRows:[]};
 const html=(v)=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtNum=(v)=>Number(v||0).toLocaleString("fr-FR");
 const formatted=(v)=>v?new Date(v).toLocaleDateString("fr-FR"):"—";
@@ -105,7 +106,7 @@ function dashboard(){
  })).sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")).slice(0,6);
  return layoutTitle("Vue d’ensemble","Une vision claire de votre activité commerciale et de la prochaine action à entreprendre.",'<button class="btn green" data-action="add" data-kind="lead">+ Nouvelle demande</button>')+
  (siteNew.length?'<section class="site-alert"><div><strong>'+siteNew.length+' demande(s) reçue(s) via le site à traiter</strong><p>Ouvrez les demandes, vérifiez le besoin et préparez un devis. Aucun message n’est envoyé automatiquement.</p></div><button class="btn green small" data-view="lead">Traiter les demandes →</button></section>':'')+
- '<div class="grid5">'+kpis.map(k=>'<article class="kpi"><span class="klabel">'+html(k[0])+'</span><span class="number">'+html(k[1])+'</span><small>'+html(k[2])+'</small></article>').join("")+'</div>'+dueBlock+
+ '<div class="grid5">'+kpis.map(k=>'<article class="kpi"><span class="klabel">'+html(k[0])+'</span><span class="number">'+html(k[1])+'</span><small>'+html(k[2])+'</small></article>').join("") +'</div>'+dueBlock+renderFunnelDashboard(state.funnelRows)+renderCampaignLinks()+
  '<div class="dash-grid"><section class="panel"><h2>Pipeline de conversion</h2><p class="sub">Demandes par étape, mises à jour depuis les fiches clients.</p><div class="pipeline">'+statuses.map((s,i)=>'<div class="pipeline-row"><span>'+html(s)+'</span><div class="bar"><i style="width:'+counts[i]/max*100+'%"></i></div><strong>'+counts[i]+'</strong></div>').join("")+'</div><p class="section-caption">Un client apparaît dans son statut actuel, pas dans toutes les étapes précédentes.</p></section>'+
  '<section class="panel"><h2>Prochaines actions</h2><p class="sub">Relances, rendez-vous et tâches prioritaires.</p>'+
  (next.length?next.map(x=>'<div class="next-item"><div><b>'+html(x.name)+'</b><small>'+html(x.action)+'</small></div><span class="pill-date">'+html(x.date||"À planifier")+'</span></div>').join(""):'<div class="empty"><div class="empty-icon">✦</div><h3>Tout commence ici</h3><p>Ajoutez un prospect ou une tâche pour préparer vos premières actions commerciales.</p><button class="btn secondary" data-action="add" data-kind="prospect">+ Ajouter un prospect</button></div>')+
@@ -165,6 +166,7 @@ async function loadAll(){
  try{
   const rows=await Promise.all(keys.map(async kind=>({kind,...await api("/api/aurea-crm?kind="+kind)})));
   for(const r of rows)state.cache[r.kind]=r.items||[];
+  try{state.funnelRows=(await api("/api/aurea-funnel")).rows||[];}catch{state.funnelRows=[];}
   state.error="";
  }catch(e){state.error=e.message; if(state.authenticated)toast("Données indisponibles : "+e.message,true);}
  if(state.authenticated)render();
@@ -320,6 +322,13 @@ async function onClick(event){
    const win=window.open(prepared.gmail,"_blank","noopener,noreferrer");
    if(!win)toast("Gmail a été demandé. Si rien ne s'ouvre, autorisez les nouveaux onglets.",true);
   }else window.location.href=prepared.mailto;
+  return;
+ }
+ if(action==="copy-funnel"){
+  const type=el.dataset.type,channel=document.getElementById("campaignChannel")?.value||"site";
+  const url=publicFunnelLink(type,channel);
+  try{await navigator.clipboard.writeText(url);toast("Lien "+type+" copié — prêt à partager.");}
+  catch{window.prompt("Copiez ce lien Auréa :",url);}
   return;
  }
  if(action==="refresh"){await loadAll();toast("Données actualisées");return;}
