@@ -88,7 +88,8 @@ function chooseService(type,advance=true){
  byId("volumeLabel").textContent=cfg.volumeLabel;
  byId("volume").placeholder=cfg.volumeExample;
  byId("frequencyLabel").textContent=cfg.frequencyLabel;
- byId("frequence").replaceChildren(new Option("Choisir...", ""),...cfg.frequency.map(item=>new Option(item,item)));
+ const makeOption=(label,value)=>{const option=document.createElement("option");option.value=value;option.textContent=label;return option;};
+ byId("frequence").replaceChildren(makeOption("Choisir...",""),...cfg.frequency.map(item=>makeOption(item,item)));
  byId("optionGrid").replaceChildren(...cfg.options.map(item=>{
    const label=document.createElement("label");label.className="option";
    const input=document.createElement("input");input.type="checkbox";input.value=item;input.className="service-option";
