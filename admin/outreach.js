@@ -68,7 +68,7 @@ function introSyndic(company,local){
 }
 function introLinen(company){
  return {
-  subject:"Partenariat blanchisserie professionnelle à Zenata — Auréa",
+  subject:"Partenariat linge hôtelier et blanchisserie à Zenata — Auréa",
   body:[
    "Bonjour à l’équipe "+company+",","",
    "Je vous contacte pour le compte d’Auréa, une structure qui accompagne les propriétaires et gestionnaires de logements en location courte durée à Zenata.",
@@ -89,7 +89,7 @@ function introLinen(company){
 function replyLead(data){
  const service=tidy(data.service,120),zone=tidy(data.zone,100);
  return {
-  subject:"Votre demande Auréa — précisions et prochaines étapes",
+  subject:"Suite à votre demande Auréa — précisions et prochaines étapes",
   body:[
    "Bonjour "+tidy(data.name,80)+",","",
    "Merci d’avoir contacté Auréa. Nous avons bien pris connaissance de votre demande"+(service?" concernant « "+service+" »":"")+(zone?" à "+zone:"")+".",
@@ -147,7 +147,7 @@ function meeting(company,security){
 }
 function proposal(data,kind,security,partner){
  const company=tidy(data.name,80);
- const amount=typeof data.quote==="number"&&data.quote>0
+ const amount=(typeof data.quote==="number"||typeof data.quote==="string")&&Number(data.quote)>0
   ?"Le budget indicatif saisi au dossier est de "+Number(data.quote).toLocaleString("fr-FR")+" DH ; le montant et les conditions définitives restent à valider."
   :"Le montant et les conditions seront définis après validation du périmètre et des coûts.";
  return {
@@ -165,7 +165,11 @@ function proposal(data,kind,security,partner){
    "• responsabilités respectives, points de contrôle et procédure de retour qualité ;",
    "• modalités de facturation et de suivi.",
    "",
+   data.proposalScope?"Périmètre envisagé : "+tidy(data.proposalScope,900):"",
+   data.proposalFrequency?"Fréquence prévue : "+tidy(data.proposalFrequency,180):"",
    amount,
+   data.proposalConditions?"Conditions envisagées : "+tidy(data.proposalConditions,600):"",
+   data.proposalValidUntil?"Validité indicative de la proposition jusqu’au "+tidy(data.proposalValidUntil,30):"",
    security?"Toute offre de gardiennage est subordonnée à la vérification des autorisations réglementaires.":"",
    "",
    "Si ce cadrage vous convient, pourriez-vous confirmer les éléments ci-dessus ou nous proposer une visite de site ? Nous finaliserons alors une proposition chiffrée.",
