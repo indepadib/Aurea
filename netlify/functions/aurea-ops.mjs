@@ -16,9 +16,9 @@ async function actorFor(req,db){
  const space=req.headers.get("x-aurea-space");
  if(space==="operations" && !isAuthorized(req))return null;
  if(space==="operations" || (space!=="hosts" && isAuthorized(req)))return {role:"admin",companyId:null};
- const id=hostId(req);
- if(!id)return null;
- const rows=await db.sql`select id,name from aurea_ops_companies where id=${id}::uuid and active=true limit 1`;
+ const session=hostId(req);
+ if(!session)return null;
+ const rows=await db.sql`select id,name from aurea_ops_companies where id=${session.id}::uuid and session_rev=${session.rev} and active=true limit 1`;
  return rows.length?{role:"concierge",companyId:rows[0].id,companyName:rows[0].name}:null;
 }
 function propData(body){
@@ -80,7 +80,7 @@ export default async function handler(req){
   if(action==="reset_company_access"){
    if(!admin||!identifier(body.companyId))return response({error:"Action interdite"},403);
    const password=newHostPassword(),hash=hashPassword(password);
-   const rows=await db.sql`update aurea_ops_companies set password_hash=${hash} where id=${body.companyId}::uuid returning id,name,email`;
+   const rows=await db.sql`update aurea_ops_companies set password_hash=${hash},session_rev=session_rev+1 where id=${body.companyId}::uuid returning id,name,email`;
    return rows.length?response({company:rows[0],temporaryPassword:password}):response({error:"Client introuvable"},404);
   }
   if(action==="create_team"){
