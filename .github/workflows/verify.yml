@@ -1,4 +1,4 @@
-name: Verify Auréa Admin
+name: Verify Auréa Platform
 
 on:
   pull_request:
@@ -21,6 +21,11 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run build
       - run: npm test
+      - run: node --check ops/console.js
+      - run: node --check lib/aurea-ops-core.mjs
+      - run: node --check netlify/functions/aurea-ops.mjs
+      - run: node --check netlify/functions/aurea-host-login.mjs
+      - run: node --check netlify/functions/aurea-ops-photo.mjs
       - run: node --check admin/app.js
       - run: node --check netlify/functions/aurea-auth.mjs
       - run: node --check netlify/functions/aurea-crm.mjs

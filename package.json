@@ -8,7 +8,8 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@netlify/database": "2.0.3"
+    "@netlify/database": "2.0.3",
+    "@netlify/blobs": "11.1.9"
   },
   "devDependencies": {
     "happy-dom": "21.0.4"
