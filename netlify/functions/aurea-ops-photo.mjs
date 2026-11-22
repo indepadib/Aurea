@@ -9,10 +9,10 @@ export default async function handler(req){
  if(!["GET","POST"].includes(req.method))return response({error:"Méthode refusée"},405);
  if(req.method==="POST"&&!sameOrigin(req))return response({error:"Origine invalide"},403);
  try{
-  const db=getDatabase(),admin=isAuthorized(req),companyId=admin?null:hostId(req);
+  const db=getDatabase(),admin=isAuthorized(req),session=admin?null:hostId(req),companyId=session?.id||null;
   if(!admin&&!companyId)return response({error:"Connexion nécessaire"},401);
   if(companyId){
-   const active=await db.sql`select id from aurea_ops_companies where id=${companyId}::uuid and active=true`;
+   const active=await db.sql`select id from aurea_ops_companies where id=${companyId}::uuid and session_rev=${session.rev} and active=true`;
    if(!active.length)return response({error:"Accès suspendu"},403);
   }
   if(req.method==="GET"){
