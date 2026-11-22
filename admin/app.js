@@ -180,6 +180,78 @@ function openModal(kind,item=null,defaults={}){
  overlay.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · '+html(meta.title)+'</span><h2 id="modalTitle">'+html(title)+'</h2><p class="desc">Enregistrement privé dans votre espace Auréa.</p></div><button type="button" class="x" aria-label="Fermer" data-action="close">×</button></div><form id="recordForm" data-kind="'+kind+'" data-id="'+html(item?.id||"")+'" data-origin-prospect="'+html(defaults.originProspectId||"")+'"><div class="formgrid">'+all+'</div><div class="modal-footer"><button type="button" class="btn secondary" data-action="close">Annuler</button><button type="submit" class="btn green" id="saveButton">Enregistrer →</button></div></form></div>';
  document.body.append(overlay);overlay.querySelector("input,select,textarea")?.focus();
 }
+
+const findRecord=(kind,id)=>state.cache[kind]?.find(x=>x.id===id);
+async function openDossier(kind,id){
+ const record=findRecord(kind,id);
+ if(!record)return toast("Cette fiche n’est plus disponible.",true);
+ document.getElementById("dossierOverlay")?.remove();
+ const modal=document.createElement("div");
+ modal.className="modal-overlay";modal.id="dossierOverlay";
+ modal.innerHTML='<section class="modal dossier-modal" role="dialog" aria-modal="true" aria-labelledby="dossierTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · Dossier commercial</span><h2 id="dossierTitle">'+html(record.data.name)+'</h2><p class="desc">Besoins, coordonnées, prochaines étapes et historique des échanges.</p></div><button class="x" type="button" data-action="close-dossier" aria-label="Fermer">×</button></div><div id="dossierContent"><p class="muted">Chargement de l’historique...</p></div></section>';
+ document.body.append(modal);
+ try{
+  const res=await api("/api/aurea-activities?kind="+kind+"&recordId="+encodeURIComponent(id));
+  if(document.getElementById("dossierOverlay")===modal)modal.querySelector("#dossierContent").innerHTML=renderDossier(record,kind,res.items||[]);
+ }catch(err){
+  if(document.getElementById("dossierOverlay")===modal)
+   modal.querySelector("#dossierContent").innerHTML='<div class="alert">'+html("Impossible de lire l’historique : "+err.message)+'</div>';
+ }
+}
+function openCompose(kind,id){
+ const record=findRecord(kind,id);
+ if(!record)return toast("Prospect non trouvé",true);
+ if(record.data.consent==="Ne pas solliciter")return toast("Ce prospect ne doit pas être sollicité.",true);
+ if(!contactLinks(record.data,kind).email)return toast("Adresse email professionnelle manquante : complétez la fiche.",true);
+ document.getElementById("composeOverlay")?.remove();
+ const wrap=document.createElement("div");
+ wrap.innerHTML=renderComposeModal(record,kind);
+ document.body.append(wrap.firstElementChild);
+ document.getElementById("composeOverlay").dataset.kind=kind;
+ document.getElementById("composeOverlay").dataset.recordId=id;
+ document.getElementById("composerSubject")?.focus();
+}
+function regenerateCompose(){
+ const overlay=document.getElementById("composeOverlay");if(!overlay)return;
+ const record=findRecord(overlay.dataset.kind,overlay.dataset.recordId);if(!record)return;
+ const draft=composeOutreach(record.data,overlay.dataset.kind,document.getElementById("composerMode").value);
+ document.getElementById("composerSubject").value=draft.subject;
+ document.getElementById("composerBody").value=draft.body;
+}
+function currentPreparedMessage(){
+ const overlay=document.getElementById("composeOverlay");
+ if(!overlay)return null;
+ const email=document.getElementById("composerEmail").value.trim();
+ const subject=document.getElementById("composerSubject").value.trim();
+ const body=document.getElementById("composerBody").value.trim();
+ if(!subject||body.length<30)return toast("Personnalisez l’objet et le message avant de l’ouvrir.",true),null;
+ const links=createMailLinks(email,subject,body);
+ if(!links.mailto)return toast("Adresse email invalide.",true),null;
+ return {...links,email,subject,body};
+}
+function openActivity(kind,id){
+ const record=findRecord(kind,id);if(!record)return toast("Fiche introuvable",true);
+ document.getElementById("activityOverlay")?.remove();
+ const holder=document.createElement("div");holder.innerHTML=renderActivityModal(record,kind);
+ document.body.append(holder.firstElementChild);
+ document.getElementById("activityNote")?.focus();
+}
+async function saveActivity(form){
+ const data=Object.fromEntries(new FormData(form).entries());
+ const btn=document.getElementById("activitySave");
+ if(btn){btn.disabled=true;btn.textContent="Enregistrement…";}
+ try{
+  await api("/api/aurea-activities",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({recordId:form.dataset.id,kind:form.dataset.kind,...data})});
+  document.getElementById("activityOverlay")?.remove();
+  await loadAll();
+  if(document.getElementById("dossierOverlay"))await openDossier(form.dataset.kind,form.dataset.id);
+  toast("Échange consigné et prochaine action mise à jour.");
+ }catch(err){
+  if(btn){btn.disabled=false;btn.textContent="Enregistrer l’activité";}
+  toast(err.message,true);
+ }
+}
+
 async function onFormSubmit(event){
  if(event.target.id==="loginForm"){
   event.preventDefault();
@@ -190,6 +262,7 @@ async function onFormSubmit(event){
   }catch(e){showLogin(e.message);}
   return;
  }
+ if(event.target.id==="activityForm"){event.preventDefault();await saveActivity(event.target);return;}
  if(event.target.id!=="recordForm")return;
  event.preventDefault();
  const form=event.target,kind=form.dataset.kind,id=form.dataset.id,data={};
@@ -221,6 +294,23 @@ async function onClick(event){
  const el=event.target.closest("[data-action],[data-view]");if(!el)return;
  if(el.dataset.view){navigate(el.dataset.view);return;}
  const {action,kind,id}=el.dataset;
+ if(action==="dossier"){await openDossier(kind,id);return;}
+ if(action==="compose"){openCompose(kind,id);return;}
+ if(action==="activity"){openActivity(kind,id);return;}
+ if(action==="close-dossier"){document.getElementById("dossierOverlay")?.remove();return;}
+ if(action==="close-compose"){document.getElementById("composeOverlay")?.remove();return;}
+ if(action==="close-activity"){document.getElementById("activityOverlay")?.remove();return;}
+ if(["open-mailto","open-gmail","copy-email"].includes(action)){
+  const prepared=currentPreparedMessage();if(!prepared)return;
+  if(action==="copy-email"){
+   try{await navigator.clipboard.writeText("Objet : "+prepared.subject+"\n\n"+prepared.body);toast("Message copié. Vérifiez et envoyez depuis votre messagerie.");}
+   catch{toast("Copie impossible : sélectionnez manuellement le texte.",true);}
+  }else if(action==="open-gmail"){
+   const win=window.open(prepared.gmail,"_blank","noopener,noreferrer");
+   if(!win)toast("Gmail a été demandé. Si rien ne s'ouvre, autorisez les nouveaux onglets.",true);
+  }else window.location.href=prepared.mailto;
+  return;
+ }
  if(action==="refresh"){await loadAll();toast("Données actualisées");return;}
  if(action==="scope"){state.scope=el.dataset.scope||"all";render();return;}
  if(action==="contacted"){
@@ -283,8 +373,9 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
  if(e.target.id==="statusFilter"){state.status=e.target.value;render();}
+ if(e.target.id==="composerMode")regenerateCompose();
 });
-document.addEventListener("keydown",e=>{if(e.key==="Escape")document.getElementById("modalOverlay")?.remove();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")for(const id of ["modalOverlay","composeOverlay","activityOverlay","dossierOverlay"])document.getElementById(id)?.remove();});
 async function init(){
  try{
   const session=await api("/api/aurea-auth");
