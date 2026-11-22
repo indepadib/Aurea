@@ -19,9 +19,10 @@ test("host session cookie is signed, HttpOnly and rejects tampering",()=>{
  assert.match(cookie,/Secure/);
  assert.match(cookie,/SameSite=Strict/);
  const raw=cookie.split(";")[0],req=value=>new Request("https://aurea.test/",{headers:{cookie:value}});
- assert.equal(core.hostId(req(raw)),company);
+ assert.deepEqual(core.hostId(req(raw)),{id:company,rev:0});
  assert.equal(core.hostId(req(raw.replace(company,"d149d00a-d407-4a23-801e-61f62d29f20f"))),null);
  assert.equal(core.hostId(req(core.clearHostCookie())),null);
+ assert.deepEqual(core.hostId(req(core.hostCookie(company,3).split(";")[0])),{id:company,rev:3});
 });
 test("only admins can confirm, assign and complete",()=>{
  assert.equal(core.validTransition("requested","confirmed","concierge"),false);
