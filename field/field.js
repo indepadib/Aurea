@@ -66,7 +66,8 @@ async function action(el){
   if(!box)return;
   const data=await api("/api/aurea-field?resource=lock_code&job="+encodeURIComponent(id));
   box.textContent="Code de serrure : "+data.code;box.hidden=false;
-  setTimeout(()=>{if(box.isConnected){box.textContent="";box.hidden=true}},30000);
+  const lockTimer=setTimeout(()=>{if(box.isConnected){box.textContent="";box.hidden=true}},30000);
+  lockTimer.unref?.();
   return;
  }
  if(name==="start"){await post("start",{jobId:id});document.getElementById("field-overlay")?.remove();await refresh({openId:id});toast("Début de mission horodaté");return}
