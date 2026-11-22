@@ -139,18 +139,19 @@ export default async function handler(req){
    if(!rows.length)return response({error:"Intervention introuvable"},404);
    const j=rows[0];
    if(!validTransition(j.status,to,actor.role))return response({error:"Transition non autorisée depuis "+j.status},409);
-   if(to==="assigned" &&(!admin||!identifier(body.teamId)))return response({error:"Équipe requise"},400);
-   if(to==="assigned"){
+   if(to==="confirmed" &&(!admin||!identifier(body.teamId)))return response({error:"Sélectionnez une équipe disponible pour confirmer la prestation."},400);
+   if(to==="confirmed"){
     const team=await db.sql`select id from aurea_ops_teams where id=${body.teamId}::uuid and active=true`;
-    if(!team.length)return response({error:"Équipe introuvable"},404);
+    if(!team.length)return response({error:"Équipe inactive ou introuvable"},404);
    }
+   if(to==="assigned" && !identifier(j.team_id))return response({error:"Aucune équipe réservée pour cette prestation"},409);
    if(to==="completed"){
     if(!qualityComplete(j.checklist))return response({error:"Checklist qualité incomplète"},409);
     const photos=await db.sql`select count(*)::int as total from aurea_ops_job_photos where job_id=${id}::uuid`;
     if(Number(photos[0]?.total||0)<1)return response({error:"Au moins une photo de contrôle est obligatoire"},409);
    }
-   const teamId=to==="assigned"?body.teamId:null;
-   const updated=to==="assigned"?
+   const teamId=to==="confirmed"?body.teamId:j.team_id||null;
+   const updated=to==="confirmed"?
     await db.sql`update aurea_ops_jobs set status=${to},team_id=${teamId}::uuid,updated_at=now() where id=${id}::uuid and status=${j.status} returning id,status`:
     await db.sql`update aurea_ops_jobs set status=${to},updated_at=now(),completed_at=case when ${to}='completed' then now() else completed_at end where id=${id}::uuid and status=${j.status} returning id,status`;
    if(!updated.length)return response({error:"L'intervention a changé. Rechargez le planning."},409);
@@ -161,7 +162,7 @@ export default async function handler(req){
    if(!admin||!identifier(body.jobId)||!identifier(body.teamId))return response({error:"Affectation invalide"},400);
    const team=await db.sql`select id from aurea_ops_teams where id=${body.teamId}::uuid and active=true`;
    if(!team.length)return response({error:"Équipe inactive"},404);
-   const rows=await db.sql`update aurea_ops_jobs set team_id=${body.teamId}::uuid,updated_at=now() where id=${body.jobId}::uuid and status='assigned' returning id`;
+   const rows=await db.sql`update aurea_ops_jobs set team_id=${body.teamId}::uuid,updated_at=now() where id=${body.jobId}::uuid and status in ('confirmed','assigned') returning id`;
    if(!rows.length)return response({error:"Réaffectation réservée aux interventions affectées"},409);
    await db.sql`insert into aurea_ops_job_events(job_id,actor,event,detail) values(${body.jobId}::uuid,'admin','reassigned',${JSON.stringify({teamId:body.teamId})}::jsonb)`;
    return response({job:rows[0]});
