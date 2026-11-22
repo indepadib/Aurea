@@ -41,6 +41,12 @@ test("follow-up, meeting and proposal drafts differ and preserve a clear custome
  assert.match(proposal.body,/Nettoyage complet/);
  assert.match(proposal.body,/4 rotations par mois/);
 });
+test("follow-up for an inbound request stays client-oriented",()=>{
+ const draft=composeOutreach({...inbound,contactedAt:"2026-11-22"},"lead","followup");
+ assert.match(draft.subject,/suivi de votre demande/);
+ assert.match(draft.body,/Bonjour Client Test/);
+ assert.doesNotMatch(draft.body,/collaboration B2B/);
+});
 test("editable draft links always encode user-selected subject and body",()=>{
  const x=createMailLinks("commercial@example.com","Objet € & plus","Bonjour,\nNotre proposition...");
  assert.match(x.mailto,/subject=Objet%20%E2%82%AC%20%26%20plus/);
