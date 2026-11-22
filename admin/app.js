@@ -1,5 +1,7 @@
 import { isSecurityTarget, contactLinks } from "./outreach.js";
 import { renderScopeTabs, renderContactDirectory } from "./outreach-view.js";
+import { composeOutreach, createMailLinks } from "./outreach.js";
+import { renderLeadWorkspace, renderDossier, renderComposeModal, renderActivityModal } from "./sales-ui.js";
 const sections={
   prospect:{title:"Prospects B2B",subtitle:"Conciergeries, syndics, résidences et contacts B2B qualifiés pour Zenata.",singular:"prospect",icon:"◎",columns:["name","segment","zone","priority","status","sourceUrl","nextAction"],fields:[
     ["name","Entreprise / prospect","text",true],["segment","Segment","select",false,["Conciergerie","Hôte multi-logements","Agence immobilière","Gestionnaire de résidence","Syndic professionnel","Résidence / promoteur","Autre"]],
@@ -13,12 +15,14 @@ const sections={
     ["notes","Notes","textarea"]]},
   lead:{title:"Demandes & réservations",subtitle:"Des premiers messages jusqu'aux clients actifs et à leur marge.",singular:"demande",icon:"◉",columns:["name","segment","zone","source","status","quote","nextAction"],fields:[
     ["name","Nom client / entreprise","text",true],["segment","Service","select",false,["HOSTS","HOME","SECURITE","AUTRE"]],
-    ["zone","Résidence / zone"],["service","Besoin détaillé","textarea"],["status","Statut","select",false,["Nouveau","Qualifié","Devis envoyé","Réservé","Client","Perdu"]],
+    ["zone","Résidence / zone"],["service","Besoin détaillé","textarea"],["status","Statut","select",false,["Nouveau","À qualifier","Contacté","Qualifié","En discussion","Rendez-vous","Devis envoyé","Négociation","Réservé","Client","Perdu"]],
     ["source","Origine","select",false,["Messenger","WhatsApp","Site Auréa","Instagram","Groupe Facebook","Partenaire","Prospection B2B","Autre"]],
     ["nextAction","Prochaine action"],["nextDate","Date prévue","date"],["owner","Responsable"],
     ["email","E-mail","email"],["phone","Téléphone","tel"],
     ["quote","Devis (DH)","number"],["revenue","CA réalisé (DH)","number"],["variableCost","Coût variable (DH)","number"],
     ["consent","Base de contact","select",false,["À déterminer","Demande entrante","Consentement obtenu","Ne pas solliciter"]],
+    ["securityCompliance","Vérification gardiennage","select",false,["Non vérifié","En cours","Autorisations vérifiées"]],
+    ["complianceEvidence","Justificatifs / autorisations vérifiées","textarea"],
     ["notes","Notes","textarea"]]},
   partner:{title:"Partenaires",subtitle:"Pressings, agents immobiliers, blanchisseries et apporteurs d'affaires.",singular:"partenaire",icon:"◇",columns:["name","segment","zone","status","nextAction"],fields:[
     ["name","Nom de l'entreprise","text",true],["segment","Type de partenariat","select",false,["Blanchisserie","Pressing","Agence immobilière","Conciergerie","Apporteur d'affaires","Autre"]],
@@ -68,7 +72,7 @@ function showLogin(message=""){
  app.innerHTML='<div class="login-screen"><div class="login-art"><img src="../assets/logo-symbol-clean.png" alt="Auréa"><div><small>Auréa • Gestion interne</small><h1>Votre activité.<br>En un seul endroit.</h1><p>Pilotez vos prospects, vos demandes, vos campagnes et vos opérations commerciales de Zenata.</p></div><small>Espace réservé à l’équipe Auréa</small></div><div class="login-side"><form id="loginForm" class="login-card"><span class="eyebrow">Accès privé</span><h2>Bienvenue chez Auréa.</h2><p>Connectez-vous pour accéder à votre espace commercial.</p>'+(message?'<div class="alert">'+html(message)+'</div>':'')+(!state.configured?'<div class="alert info">L’accès privé n’est pas encore configuré. Définissez les secrets Netlify avant la mise en service.</div>':'')+'<div class="field" style="margin-top:28px"><label for="password">Mot de passe administrateur</label><input id="password" type="password" name="password" autocomplete="current-password" minlength="16" required placeholder="Votre mot de passe"></div><button class="btn" '+(!state.configured?'disabled':'')+' type="submit">Accéder à mon espace →</button><div class="login-meta">Accès chiffré · Données non publiques</div></form></div></div>';
 }
 function shell(){
- app.innerHTML='<div class="shell"><aside class="sidebar"><a class="brand" href="../"><img src="../assets/logo-symbol-clean.png" alt=""><div><strong>AURÉA</strong><small>GROWTH CONSOLE</small></div></a><div class="nav-label">Votre activité</div><nav class="nav-menu" id="nav"><button class="nav-item" data-view="dashboard"><span class="symbol">▤</span>Vue d’ensemble</button>'+keys.map(k=>'<button class="nav-item" data-view="'+k+'"><span class="symbol">'+sections[k].icon+'</span>'+html(sections[k].title)+'</button>').join("")+'</nav><div class="side-foot">Auréa · Zenata<br>CRM interne • v1<button data-action="logout">Se déconnecter ↗</button></div></aside><div class="main"><div class="topbar"><div class="crumb">Auréa / <span id="crumb">Vue d’ensemble</span></div><div class="team">● &nbsp; Espace privé</div></div><main class="page" id="page"></main></div></div>';
+ app.innerHTML='<div class="shell"><aside class="sidebar"><a class="brand" href="../"><img src="../assets/logo-symbol-clean.png" alt=""><div><strong>AURÉA</strong><small>GROWTH CONSOLE</small></div></a><div class="nav-label">Votre activité</div><nav class="nav-menu" id="nav"><button class="nav-item" data-view="dashboard"><span class="symbol">▤</span>Vue d’ensemble</button><button class="nav-item" data-view="clients"><span class="symbol">♙</span>Clients & contrats</button>'+keys.map(k=>'<button class="nav-item" data-view="'+k+'"><span class="symbol">'+sections[k].icon+'</span>'+html(sections[k].title)+'</button>').join("")+'</nav><div class="side-foot">Auréa · Zenata<br>CRM interne • v1<button data-action="logout">Se déconnecter ↗</button></div></aside><div class="main"><div class="topbar"><div class="crumb">Auréa / <span id="crumb">Vue d’ensemble</span></div><div class="team">● &nbsp; Espace privé</div></div><main class="page" id="page"></main></div></div>';
 }
 function layoutTitle(title,description,button){
  return '<div class="page-header"><div><span class="eyebrow">Auréa · Zenata</span><h1>'+html(title)+'</h1><p>'+html(description)+'</p></div>'+(button||"")+'</div>';
@@ -105,6 +109,10 @@ function fieldText(key,value){
  if(key==="sourceUrl")return /^https?:\/\//i.test(String(value||""))?'<a target="_blank" rel="noopener noreferrer" href="'+html(value)+'">Voir la source ↗</a>':"—";
  return html(value||"—");
 }
+function clientsView(){
+ return layoutTitle("Clients & contrats","Retrouvez les dossiers avec une réservation ou une collaboration réellement confirmée.",'<button class="btn green" data-action="add" data-kind="lead">+ Nouvelle demande</button>')+
+  renderLeadWorkspace(state.cache.lead,true);
+}
 function sectionView(kind){
  const meta=sections[kind],rows=state.cache[kind]||[];
  const query=state.search.trim().toLowerCase();
@@ -121,7 +129,7 @@ function sectionView(kind){
  const cols=meta.columns;
  const toolbar='<div class="toolbar"><div class="left"><input class="search-input" id="searchInput" type="search" placeholder="Rechercher dans '+html(meta.title.toLowerCase())+'..." value="'+html(state.search)+'" aria-label="Rechercher"><select class="filter-select" id="statusFilter"><option value="">Tous les statuts</option>'+statuses.map(s=>'<option value="'+html(s)+'" '+(state.status===s?'selected':'')+'>'+html(s)+'</option>').join("")+'</select></div><span class="muted">'+filtered.length+' résultat(s)</span></div>';
  const tip=kind==="lead"?'<div class="inline-guide">⌁ Les demandes du formulaire Auréa arrivent ici après validation par Netlify. Cliquez sur « Qualifier » ou « Modifier » pour préparer la suite.</div>':kind==="prospect"?'<div class="inline-guide">Base issue de sources professionnelles publiques. « À qualifier » signifie qu’aucun contact n’a été établi. La couverture Zenata est à confirmer avant proposition.</div>':'';
- const list=(kind==="prospect"||kind==="partner")?renderContactDirectory(kind,filtered):filtered.length?'<div class="table-wrap"><table><thead><tr>'+cols.map(col=>'<th>'+html(fieldsMap[kind][col]||col)+'</th>').join("")+'<th>Actions</th></tr></thead><tbody>'+
+ const list=(kind==="prospect"||kind==="partner")?renderContactDirectory(kind,filtered):kind==="lead"?renderLeadWorkspace(filtered):filtered.length?'<div class="table-wrap"><table><thead><tr>'+cols.map(col=>'<th>'+html(fieldsMap[kind][col]||col)+'</th>').join("")+'<th>Actions</th></tr></thead><tbody>'+
  filtered.map(x=>'<tr>'+cols.map(col=>'<td class="'+(col==="name"?"strong":"")+'">'+fieldText(col,x.data[col])+'</td>').join("")+
  '<td><div class="cell-actions">'+(kind==="prospect"?'<button class="btn small secondary" data-action="convert" data-kind="prospect" data-id="'+html(x.id)+'">Créer une demande →</button>':kind==="lead"&&x.data.status==="Nouveau"?'<button class="btn small green" data-action="qualify" data-kind="lead" data-id="'+html(x.id)+'">Qualifier</button>':'')+'<button class="icon-button" aria-label="Modifier" data-action="edit" data-kind="'+kind+'" data-id="'+html(x.id)+'">Modifier</button><button class="icon-button" aria-label="Supprimer" data-action="delete" data-kind="'+kind+'" data-id="'+html(x.id)+'">✕</button></div></td></tr>').join("")+'</tbody></table></div>':
  '<div class="table-wrap empty"><div class="empty-icon">◎</div><h3>'+(query||state.status?'Aucun résultat pour ce filtre':'Aucune donnée pour le moment')+'</h3><p>'+(query||state.status?'Changez votre recherche pour afficher vos fiches.':'Créez votre première fiche pour structurer votre activité. Les données seront enregistrées dans la base Auréa.')+'</p><button class="btn secondary" data-action="add" data-kind="'+kind+'">+ Ajouter '+html(meta.singular)+'</button></div>';
@@ -130,11 +138,11 @@ function sectionView(kind){
 function render(){
  if(!state.authenticated)return;
  document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===state.current));
- document.getElementById("crumb").textContent=state.current==="dashboard"?"Vue d’ensemble":sections[state.current].title;
- document.getElementById("page").innerHTML=state.current==="dashboard"?dashboard():sectionView(state.current);
+ document.getElementById("crumb").textContent=state.current==="dashboard"?"Vue d’ensemble":state.current==="clients"?"Clients & contrats":sections[state.current].title;
+ document.getElementById("page").innerHTML=state.current==="dashboard"?dashboard():state.current==="clients"?clientsView():sectionView(state.current);
 }
 function navigate(view){
- if(view!=="dashboard"&&!sections[view])return;
+ if(view!=="dashboard"&&view!=="clients"&&!sections[view])return;
  state.current=view;state.search="";state.status="";state.scope="all";
  history.replaceState(null,"","#"+view);
  render();
@@ -169,7 +177,7 @@ function openModal(kind,item=null,defaults={}){
   return '<div class="field '+(type==="textarea"?"wide":"")+'"><label for="'+id+'">'+html(label)+(required?" *":"")+'</label>'+input+'</div>';
  }).join("");
  const overlay=document.createElement("div");overlay.className="modal-overlay";overlay.id="modalOverlay";
- overlay.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · '+html(meta.title)+'</span><h2 id="modalTitle">'+html(title)+'</h2><p class="desc">Enregistrement privé dans votre espace Auréa.</p></div><button type="button" class="x" aria-label="Fermer" data-action="close">×</button></div><form id="recordForm" data-kind="'+kind+'" data-id="'+html(item?.id||"")+'"><div class="formgrid">'+all+'</div><div class="modal-footer"><button type="button" class="btn secondary" data-action="close">Annuler</button><button type="submit" class="btn green" id="saveButton">Enregistrer →</button></div></form></div>';
+ overlay.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · '+html(meta.title)+'</span><h2 id="modalTitle">'+html(title)+'</h2><p class="desc">Enregistrement privé dans votre espace Auréa.</p></div><button type="button" class="x" aria-label="Fermer" data-action="close">×</button></div><form id="recordForm" data-kind="'+kind+'" data-id="'+html(item?.id||"")+'" data-origin-prospect="'+html(defaults.originProspectId||"")+'"><div class="formgrid">'+all+'</div><div class="modal-footer"><button type="button" class="btn secondary" data-action="close">Annuler</button><button type="submit" class="btn green" id="saveButton">Enregistrer →</button></div></form></div>';
  document.body.append(overlay);overlay.querySelector("input,select,textarea")?.focus();
 }
 async function onFormSubmit(event){
@@ -190,10 +198,21 @@ async function onFormSubmit(event){
    if(value!=="")data[name]=Number(value);
   }else data[name]=String(value);
  }
+ if(kind==="lead" && form.dataset.originProspect)data.originProspectId=form.dataset.originProspect;
  const button=document.getElementById("saveButton");button.disabled=true;button.textContent="Enregistrement…";
  try{
   const endpoint="/api/aurea-crm?kind="+kind+(id?"&id="+encodeURIComponent(id):"");
-  await api(endpoint,{method:id?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data})});
+  const saved=await api(endpoint,{method:id?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data})});
+  if(kind==="lead" && !id && data.originProspectId && saved.item?.id){
+   const prospect=state.cache.prospect.find(x=>x.id===data.originProspectId);
+   if(prospect){
+    try{
+     await api("/api/aurea-crm?kind=prospect&id="+encodeURIComponent(prospect.id),{
+      method:"PUT",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({data:{name:prospect.data.name,linkedLeadId:saved.item.id}})});
+    }catch(err){toast("Opportunité créée, lien retour du prospect non synchronisé : "+err.message,true);}
+   }
+  }
   document.getElementById("modalOverlay")?.remove();
   toast("Fiche enregistrée");if(kind==="lead"&&state.current==="prospect")navigate("lead");await loadAll();
  }catch(e){button.disabled=false;button.textContent="Enregistrer →";toast(e.message,true);}
@@ -218,10 +237,11 @@ async function onClick(event){
  if(action==="add"){openModal(kind,null,kind==="lead"?{status:"Nouveau",source:"Autre"}:kind==="prospect"?{status:"À qualifier",consent:"À déterminer"}:{});return;}
  if(action==="convert"){
   const prospect=state.cache.prospect.find(x=>x.id===id);if(!prospect)return;
-   const existing=state.cache.lead.find(x=>x.data.source==="Prospection B2B"&&x.data.name.toLowerCase()===prospect.data.name.toLowerCase());
+   const existing=state.cache.lead.find(x=>x.data.originProspectId===prospect.id||(x.data.source==="Prospection B2B"&&x.data.name.toLowerCase()===prospect.data.name.toLowerCase()));
    if(existing){navigate("lead");openModal("lead",existing);toast("Cette entreprise a déjà une demande : fiche existante ouverte");return;}
   openModal("lead",null,{
    name:prospect.data.name,segment:isSecurityTarget(prospect.data)?"SECURITE":"HOSTS",zone:prospect.data.zone,
+   originProspectId:prospect.id,
    service:isSecurityTarget(prospect.data)?"Entretien et gardiennage (autorisation à vérifier)":"Ménage et linge pour locations saisonnières",
    source:"Prospection B2B",status:"Nouveau",
    consent:prospect.data.consent==="Demande entrante"?"Demande entrante":"À déterminer",
