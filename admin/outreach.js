@@ -125,6 +125,36 @@ function followup(company,security){
   ].join("\n")
  };
 }
+function followupLead(data){
+ const name=tidy(data.name,80),service=tidy(data.service,100);
+ return {
+  subject:"Auréa — suivi de votre demande"+(service?" (« "+service+" »)":""),
+  body:[
+   "Bonjour "+name+",","",
+   "Je reviens vers vous concernant votre demande auprès d’Auréa"+(service?" pour « "+service+" »":"")+".",
+   "",
+   "Nous pouvons avancer dès que nous aurons confirmé ensemble la localisation exacte, le périmètre souhaité et le calendrier d’intervention.",
+   "",
+   "Votre projet est-il toujours d’actualité ? Si oui, vous pouvez simplement nous préciser votre créneau de disponibilité pour un court échange, ou nous répondre directement avec les informations manquantes.",
+   "",
+   "Si votre besoin a évolué ou n’est plus d’actualité, n’hésitez pas à nous le signaler.",
+   closing
+  ].join("\n")
+ };
+}
+function meetingLead(data){
+ const name=tidy(data.name,80);
+ return {
+  subject:"Auréa — convenons d’un échange sur votre demande",
+  body:[
+   "Bonjour "+name+",","",
+   "Merci pour votre retour. Pour préparer une proposition adaptée, je vous propose un appel de 15 minutes afin de confirmer le logement ou la résidence concernée, les services attendus et les dates souhaitées.",
+   "",
+   "Pourriez-vous m’indiquer deux créneaux qui vous conviendraient ? Nous vous confirmerons l’horaire retenu après vérification de nos disponibilités.",
+   closing
+  ].join("\n")
+ };
+}
 function meeting(company,security){
  return {
   subject:"Échange Auréa / "+company+" — besoins à Zenata",
@@ -153,7 +183,7 @@ function proposal(data,kind,security,partner){
  return {
   subject:"Suite à notre échange — cadrage d’une collaboration Auréa / "+company,
   body:[
-   "Bonjour à l’équipe "+company+",","",
+   (kind==="lead"?"Bonjour "+company+",":"Bonjour à l’équipe "+company+","),"",
    "À la suite de nos échanges, voici les points que nous proposons de valider avant d’établir une offre définitive :",
    "",
    security
@@ -183,6 +213,8 @@ export function composeOutreach(data={},kind="prospect",mode="intro"){
  const security=isSecurityTarget(data),local=/zenata/i.test(data.zone||"")&&!/non confirm|à confirmer|hors cible/i.test(data.zone||"");
  let draft;
  if(kind==="lead"&&mode==="intro")draft=replyLead(data);
+ else if(kind==="lead"&&mode==="followup")draft=followupLead(data);
+ else if(kind==="lead"&&mode==="meeting")draft=meetingLead(data);
  else if(mode==="followup")draft=followup(company,security);
  else if(mode==="meeting")draft=meeting(company,security);
  else if(mode==="proposal")draft=proposal(data,kind,security,partner);
