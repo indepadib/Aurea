@@ -129,7 +129,9 @@ function modal(kind,entity={}){
  if(kind==="team")inside=`<form data-form="team"><div class="form-grid">${field("Nom de l’équipe *","name","text","","required minlength=2")}</div><div class="dialog-footer"><button class="btn">Ajouter l’équipe</button></div></form>`;
  if(kind==="property"){
   const p=entity,org=isOps?options("companyId",state.data.companies.map(c=>({id:c.id,name:c.name})),p.company_id):"";
-  inside=`<form data-form="property" data-id="${esc(p.id||"")}"><div class="form-grid">${org}${field("Nom du logement *","name","text",p.name,"required minlength=2")}<div class="full">${field("Adresse complète *","address","text",p.address,"required minlength=8")}</div>${field("Latitude GPS","latitude","number",p.latitude??"",'step="any"')}${field("Longitude GPS","longitude","number",p.longitude??"",'step="any"')}${field("Chambres","bedrooms","number",p.bedrooms??1,'min="0" max="40"')}${field("Salles de bain","bathrooms","number",p.bathrooms??1,'min="0" max="40"')}${field("Surface en m²","surface_m2","number",p.surface_m2??"",'min="1"')}<div class="full">${field("Accès et consignes (privé)","access_notes","textarea",p.access_notes)}</div><div class="full">${field("Linge et changements de draps","linen_notes","textarea",p.linen_notes)}</div><div class="full">${field("Consommables attendus","consumables_notes","textarea",p.consumables_notes)}</div></div><div class="dialog-footer"><span class="hint">Les codes et consignes ne sont visibles que par Auréa et votre conciergerie.</span><button class="btn">${p.id?"Enregistrer les modifications":"Ajouter le logement"}</button></div></form>`;
+  const method=p.access_method||"";
+  const accessInput=`<div class="full"><div class="field"><label for="access_method">Accès au logement *</label><select name="access_method" id="access_method" required><option value="">Choisir…</option><option value="code" ${method==="code"?"selected":""}>Serrure à code / digicode</option><option value="key" ${method==="key"?"selected":""}>Remise de clés classique</option><option value="other" ${method==="other"?"selected":""}>Autre accès</option></select></div></div><div class="full"><div class="field"><label for="lock_code">Code de serrure ${method==="code"?"*":"(si applicable)"}</label><input type="password" name="lock_code" id="lock_code" maxlength="64" minlength="3" autocomplete="new-password" placeholder="${p.lock_configured?"Laisser vide pour conserver le code existant":"Saisir le code remis par l’hôte"}"><span class="hint">Code chiffré, jamais affiché dans les listes ni conservé en clair. ${p.lock_configured?"Un code est déjà enregistré.":""}</span></div></div>`;
+  inside=`<form data-form="property" data-id="${esc(p.id||"")}"><div class="form-grid">${org}${field("Nom du logement *","name","text",p.name,"required minlength=2")}<div class="full">${field("Adresse complète *","address","text",p.address,"required minlength=8")}</div>${field("Latitude GPS","latitude","number",p.latitude??"",'step="any"')}${field("Longitude GPS","longitude","number",p.longitude??"",'step="any"')}${field("Chambres","bedrooms","number",p.bedrooms??1,'min="0" max="40"')}${field("Salles de bain","bathrooms","number",p.bathrooms??1,'min="0" max="40"')}${field("Surface en m²","surface_m2","number",p.surface_m2??"",'min="1"')}${accessInput}<div class="full">${field("Accès et consignes (privé)","access_notes","textarea",p.access_notes)}</div><div class="full">${field("Linge et changements de draps","linen_notes","textarea",p.linen_notes)}</div><div class="full">${field("Consommables attendus","consumables_notes","textarea",p.consumables_notes)}</div></div><div class="dialog-footer"><span class="hint">Le code de serrure reste séparé des consignes et accessible aux équipes affectées pendant une mission active.</span><button class="btn">${p.id?"Enregistrer les modifications":"Ajouter le logement"}</button></div></form>`;
  }
  if(kind==="job"){
   const editing=Boolean(entity.id);
@@ -153,11 +155,11 @@ async function jobDetails(id){
  const next=isOps?allowedStates[job.status]||[]:job.status==="requested"?["cancelled"]:[];
  const teamSelect=`<div class="field"><label>Équipe opérationnelle</label><select id="team-for-job"><option value="">Choisir une équipe</option>${state.data.teams.filter(t=>t.active).map(t=>'<option value="'+esc(t.id)+'" '+(job.team_id===t.id?"selected":"")+'>'+esc(t.name)+'</option>').join("")}</select></div>`;
  const checklist=job.checklist||{};
- const quality=isOps&&["in_progress","qa"].includes(job.status)?`<section class="section"><h3>Contrôle qualité</h3><form data-form="quality" data-id="${esc(job.id)}">${[["cleaning","Surfaces, salle de bain et cuisine vérifiées"],["linen","Linge et literie conformes"],["consumables","Consommables réapprovisionnés"],["secure","Logement refermé, clés et accès contrôlés"]].map(([k,v])=>'<label class="check"><input type="checkbox" name="'+k+'" '+(checklist[k]?"checked":"")+'>'+esc(v)+'</label>').join("")}${field("Remarques et anomalies","notes","textarea",job.quality_notes||"")}<button class="btn">Enregistrer le contrôle</button></form><form data-form="photo" data-id="${esc(job.id)}" class="section"><h3>Photos d’intervention</h3><div class="field"><label>Photo de contrôle (3 Mo maximum)</label><input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></div>${field("Légende (avant, après, anomalie…)","caption")}<button class="btn secondary">Ajouter la preuve photo</button></form></section>`:"";
+ const quality=isOps&&["in_progress","qa"].includes(job.status)?`<section class="section"><h3>Contrôle qualité</h3><form data-form="quality" data-id="${esc(job.id)}">${[["cleaning","Surfaces, salle de bain et cuisine vérifiées"],["linen","Linge et literie conformes"],["consumables","Consommables réapprovisionnés"],["secure","Logement refermé, clés et accès contrôlés"]].map(([k,v])=>'<label class="check"><input type="checkbox" name="'+k+'" '+(checklist[k]?"checked":"")+'>'+esc(v)+'</label>').join("")}${field("Remarques et anomalies","notes","textarea",job.quality_notes||"")}<button class="btn">Enregistrer le contrôle</button></form><form data-form="photo" data-id="${esc(job.id)}" class="section"><h3>Photos d’intervention</h3><div class="field"><label>Photo de contrôle (3 Mo maximum)</label><input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required></div><div class="field"><label>Type de photo *</label><select name="photoType" required><option value="after" selected>APRÈS ménage — obligatoire pour validation</option><option value="before">Avant ménage</option><option value="incident">Incident</option></select></div>${field("Légende (avant, après, anomalie…)","caption")}<button class="btn secondary">Ajouter la preuve photo</button></form></section>`:"";
  const reschedule=job.status==="requested"?`<div class="section"><button class="btn secondary tiny" data-action="reschedule" data-id="${esc(job.id)}">Modifier le créneau et les horaires</button></div>`:"";
  const controls=next.length?`<div class="section"><h3>Faire avancer l’intervention</h3>${next.includes("confirmed")?teamSelect:""}<div class="flex">${next.map(n=>'<button class="btn '+(n==="cancelled"?"danger":"secondary")+' tiny" data-action="transition" data-id="'+esc(job.id)+'" data-status="'+esc(n)+'">'+esc(n==="cancelled"?"Annuler":statusLabels[n])+'</button>').join("")}</div><p class="hint">Les étapes sont historisées. Une équipe ne peut pas être affectée à deux interventions qui se chevauchent.</p></div>`:"";
  const reassign=isOps&&["confirmed","assigned"].includes(job.status)?`<div class="section"><h3>Changer d’équipe</h3>${teamSelect.replace('id="team-for-job"','id="team-reassign"')}<button class="btn secondary tiny" data-action="reassign" data-id="${esc(job.id)}">Réaffecter</button></div>`:"";
- const evidence=history.photos?.length?`<div class="photo-list">${history.photos.map(p=>`<a href="/api/aurea-ops-photo?job=${encodeURIComponent(id)}&photo=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer"><img loading="lazy" alt="Photo de contrôle" src="/api/aurea-ops-photo?job=${encodeURIComponent(id)}&photo=${encodeURIComponent(p.id)}"><small>${esc(p.caption||"Preuve qualité")}</small></a>`).join("")}</div>`:'<p class="hint">Aucune photo de contrôle enregistrée.</p>';
+ const evidence=history.photos?.length?`<div class="photo-list">${history.photos.map(p=>`<a href="/api/aurea-ops-photo?job=${encodeURIComponent(id)}&photo=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer"><img loading="lazy" alt="Photo de contrôle" src="/api/aurea-ops-photo?job=${encodeURIComponent(id)}&photo=${encodeURIComponent(p.id)}"><small>${esc(proofLabels[p.photo_type]||"Intervention")} · ${esc(p.caption||"Preuve qualité")}</small></a>`).join("")}</div>`:'<p class="hint">Aucune photo de contrôle enregistrée.</p>';
  const logs=history.events?.length?history.events.map(e=>`<div class="event"><b>${esc(e.event==="incident_reported"?"Incident signalé":statusLabels[e.event]||e.event.replaceAll("_"," "))}</b><small>${fmt(e.created_at,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})} · ${esc(e.actor==="admin"?"Équipe Auréa":e.actor==="field"?"Intervenant terrain":"Conciergerie")}</small>${e.detail?.note?`<p class="subtitle">${esc(e.detail?.severity||"")} · ${esc(e.detail.note)}</p>`:""}</div>`).join(""):'<p class="hint">Aucun événement enregistré.</p>';
  const mapQuery=encodeURIComponent(job.latitude!==null&&job.longitude!==null?job.latitude+","+job.longitude:job.property_address);
  const markup=`<div class="flex"><span class="status ${esc(job.status)}">${esc(statusLabels[job.status])}</span><span class="hint">${fmt(job.start_at,{weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})} — ${fmt(job.end_at,{hour:"2-digit",minute:"2-digit"})}</span></div><div class="section"><b>${esc(job.property_name)}</b><p class="subtitle">${esc(job.property_address)} · ${isOps?esc(job.company_name)+" · ":""}${esc(job.team_name||"Équipe non encore affectée")}</p><a target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${mapQuery}" class="btn secondary tiny">Localiser le logement ↗</a><p>${esc(job.notes||"Aucune consigne complémentaire")}</p></div>${reschedule}${controls}${reassign}${quality}<section class="section"><h3>Signaler une anomalie ou un incident</h3><p class="hint">Les signalements sont enregistrés et visibles dans la chronologie par Auréa et la conciergerie.</p><form data-form="incident" data-id="${esc(job.id)}"><div class="field"><label for="severity">Gravité</label><select id="severity" name="severity" required><option value="low">Mineure</option><option value="medium">Modérée</option><option value="high">Importante</option><option value="critical">Critique</option></select></div><div class="field"><label for="incident-note">Description de l’incident</label><textarea id="incident-note" name="note" minlength="10" maxlength="1400" required placeholder="Ex. Consommable manquant, dégât, retard, accès indisponible…"></textarea></div><button class="btn secondary tiny">Enregistrer l’incident</button></form></section><section class="section"><h3>Preuves photographiques</h3>${evidence}</section><section class="section"><h3>Historique de l’intervention</h3><div class="timeline">${logs}</div></section>`;
@@ -177,8 +179,23 @@ async function action(name,el){
  if(name==="create-company")return modal("company");
  if(name==="create-team")return modal("team");
  if(name==="create-agent")return modal("agent");
- if(name==="property"){const p=state.data.properties.find(x=>x.id===el.dataset.id);if(p)return modal("property",p);}
+ if(name==="property-detail")return propertyDetails(el.dataset.id);
+ if(name==="property"){const p=state.data.properties.find(x=>x.id===el.dataset.id);document.getElementById("overlay")?.remove();if(p)return modal("property",p);}
  if(name==="job")return jobDetails(el.dataset.id);
+ if(name==="reveal-lock"){
+  const elCode=document.getElementById("lock-reveal");
+  if(!elCode)return;
+  const data=await api("/api/aurea-ops?resource=lock_code&property="+encodeURIComponent(el.dataset.id));
+  elCode.textContent="Code de serrure : "+data.code;
+  elCode.hidden=false;
+  setTimeout(()=>{if(elCode.isConnected){elCode.textContent="";elCode.hidden=true;}},30000);
+  return;
+ }
+ if(name==="clear-lock"){
+  if(!confirm("Supprimer ce code de serrure ? La société de ménage ne pourra plus l'utiliser."))return;
+  await post("clear_lock_code",{propertyId:el.dataset.id});
+  await refresh();return propertyDetails(el.dataset.id);
+ }
  if(name==="copy-password"){const p=document.getElementById("password-once")?.textContent;if(p){await navigator.clipboard.writeText(p);toast("Mot de passe copié")};return;}
  if(name==="reset-agent"){
   if(!confirm("Réinitialiser les accès de cette personne ? Les sessions existantes seront invalidées."))return;
@@ -235,6 +252,7 @@ async function submit(form){
  }
  if(type==="property"){
   const old=form.dataset.id;
+  if(f.access_method==="code"&&!f.lock_code&&!old)throw Error("Le code de serrure est obligatoire pour ce mode d’accès");
   await post(old?"update_property":"create_property",{...f,...(old?{propertyId:old}:{})});
  }
  if(type==="job"){
@@ -250,8 +268,12 @@ async function submit(form){
   await post("quality",{jobId:form.dataset.id,checklist,notes:f.notes});
  }
  if(type==="photo"){
-  const payload=new FormData(form);payload.set("jobId",form.dataset.id);
+  const payload=new FormData(form);payload.set("jobId",form.dataset.propertyId?String(payload.get("jobId")||""):form.dataset.id);
   await api("/api/aurea-ops-photo",{method:"POST",body:payload});
+  if(form.dataset.propertyId){
+   document.getElementById("overlay")?.remove();await refresh();await propertyDetails(form.dataset.propertyId);
+   toast("Photo après ménage enregistrée");return;
+  }
  }
  document.getElementById("overlay")?.remove();await refresh();toast("Modifications enregistrées");
 }
