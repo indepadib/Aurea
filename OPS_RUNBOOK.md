@@ -10,10 +10,10 @@
 2. Créer une conciergerie de démonstration avec une adresse e-mail dont on maîtrise l'accès. Copier immédiatement son mot de passe généré, puis fermer la fenêtre.
 3. Créer deux logements de démonstration avec adresses et consignes, sans y saisir de véritables codes d'accès.
 4. Créer deux équipes. Dans Hosts, se connecter avec les identifiants de la conciergerie, voir uniquement ses logements.
-5. Réserver un créneau futur. Vérifier l'état « Demandé » dans Hosts et Operations.
-6. Dans Operations : confirmer, affecter une équipe. Créer une deuxième intervention se chevauchant sur la même équipe et confirmer le refus du conflit.
+5. Réserver un créneau futur en renseignant, si disponibles, le check-out et le prochain check-in. Vérifier l'état « Demandé » dans Hosts et Operations, puis modifier le créneau avant confirmation.
+6. Dans Operations : confirmer **en sélectionnant une équipe** (ce qui réserve immédiatement sa capacité), puis affecter l'équipe à l'intervention. Créer une deuxième intervention se chevauchant sur la même équipe et confirmer le refus du conflit. Essayer de réserver deux ménages simultanés dans le même logement : le second doit être refusé.
 7. Faire passer l'intervention « En cours » → « Contrôle qualité ». Remplir les quatre critères, joindre une photo non sensible, puis terminer.
-8. Dans Hosts, vérifier le statut final, la photo et la chronologie. Vérifier que la demande peut être annulée avant confirmation.
+8. Dans Hosts, vérifier le statut final, la photo et la chronologie. Signaler un incident et vérifier qu'il figure dans l'historique Auréa. Vérifier que la demande peut être annulée avant confirmation.
 9. Créer une deuxième conciergerie ; vérifier qu'elle ne voit ni les logements, ni les demandes, ni les photos de la première.
 10. Réinitialiser les accès de la première conciergerie. Vérifier que son ancien mot de passe et ses anciennes sessions ne fonctionnent plus.
 11. Tester sur smartphone : saisie d'un logement, affichage du calendrier, consultation des détails.
