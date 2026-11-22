@@ -9,5 +9,8 @@
   },
   "dependencies": {
     "@netlify/database": "2.0.3"
+  },
+  "devDependencies": {
+    "happy-dom": "21.0.4"
   }
 }
