@@ -1,15 +1,18 @@
+import { isSecurityTarget, contactLinks } from "./outreach.js";
+import { renderScopeTabs, renderContactDirectory } from "./outreach-view.js";
 const sections={
-  prospect:{title:"Prospects B2B",subtitle:"Conciergeries, agences et hôtes professionnels à qualifier à Zenata.",singular:"prospect",icon:"◎",columns:["name","segment","zone","priority","status","sourceUrl","nextAction"],fields:[
-    ["name","Entreprise / prospect","text",true],["segment","Segment","select",false,["Conciergerie","Hôte multi-logements","Agence immobilière","Gestionnaire de résidence","Autre"]],
+  prospect:{title:"Prospects B2B",subtitle:"Conciergeries, syndics, résidences et contacts B2B qualifiés pour Zenata.",singular:"prospect",icon:"◎",columns:["name","segment","zone","priority","status","sourceUrl","nextAction"],fields:[
+    ["name","Entreprise / prospect","text",true],["segment","Segment","select",false,["Conciergerie","Hôte multi-logements","Agence immobilière","Gestionnaire de résidence","Syndic professionnel","Résidence / promoteur","Autre"]],
     ["zone","Zone / résidence"],["priority","Priorité","select",false,["A","B","C"]],
     ["status","Statut","select",false,["À qualifier","Qualifié","Contact autorisé","Contacté","Rendez-vous","Devis envoyé","Client","Sans suite"]],
     ["evidence","Pourquoi ce prospect ?","textarea"],["source","Source identifiée"],["sourceUrl","URL de source","url"],
     ["nextAction","Prochaine action"],["nextDate","Date de relance","date"],["owner","Responsable"],
     ["email","E-mail professionnel","email"],["phone","Téléphone professionnel","tel"],
+    ["contactedAt","Dernier contact (date)","date"],["lastContactChannel","Canal du dernier contact"],
     ["consent","Base de contact","select",false,["À déterminer","Demande entrante","Contact professionnel autorisé","Ne pas solliciter"]],
     ["notes","Notes","textarea"]]},
   lead:{title:"Demandes & réservations",subtitle:"Des premiers messages jusqu'aux clients actifs et à leur marge.",singular:"demande",icon:"◉",columns:["name","segment","zone","source","status","quote","nextAction"],fields:[
-    ["name","Nom client / entreprise","text",true],["segment","Service","select",false,["HOSTS","HOME","AUTRE"]],
+    ["name","Nom client / entreprise","text",true],["segment","Service","select",false,["HOSTS","HOME","SECURITE","AUTRE"]],
     ["zone","Résidence / zone"],["service","Besoin détaillé","textarea"],["status","Statut","select",false,["Nouveau","Qualifié","Devis envoyé","Réservé","Client","Perdu"]],
     ["source","Origine","select",false,["Messenger","WhatsApp","Site Auréa","Instagram","Groupe Facebook","Partenaire","Prospection B2B","Autre"]],
     ["nextAction","Prochaine action"],["nextDate","Date prévue","date"],["owner","Responsable"],
@@ -22,7 +25,7 @@ const sections={
     ["zone","Zone"],["status","Statut","select",false,["À qualifier","Contacté","En négociation","En test","Actif","Écarté"]],
     ["source","Source"],["sourceUrl","Lien professionnel","url"],["nextAction","Prochaine action"],
     ["nextDate","Date de suivi","date"],["owner","Responsable"],["email","E-mail professionnel","email"],
-    ["phone","Téléphone professionnel","tel"],["consent","Base de contact","select",false,["À déterminer","Contact professionnel autorisé","Ne pas solliciter"]],
+    ["phone","Téléphone professionnel","tel"],["contactedAt","Dernier contact (date)","date"],["lastContactChannel","Canal du dernier contact"],["consent","Base de contact","select",false,["À déterminer","Contact professionnel autorisé","Ne pas solliciter"]],
     ["notes","Notes","textarea"]]},
   content:{title:"Calendrier éditorial",subtitle:"Une seule équipe de contenu pour Facebook, Instagram, Auréa Hosts et Home.",singular:"contenu",icon:"▦",columns:["name","segment","channel","format","date","status"],fields:[
     ["name","Titre du contenu","text",true],["segment","Univers","select",false,["HOSTS","HOME","MARQUE"]],
@@ -39,7 +42,7 @@ const sections={
 const keys=Object.keys(sections);
 const fieldsMap={};for(const [k,section] of Object.entries(sections))fieldsMap[k]=Object.fromEntries(section.fields.map(f=>[f[0],f[1]]));
 const app=document.getElementById("app");
-const state={authenticated:false,configured:false,current:"dashboard",cache:{prospect:[],lead:[],partner:[],content:[],task:[]},search:"",status:"",busy:false,error:""};
+const state={authenticated:false,configured:false,current:"dashboard",cache:{prospect:[],lead:[],partner:[],content:[],task:[]},search:"",status:"",scope:"all",busy:false,error:""};
 const html=(v)=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtNum=(v)=>Number(v||0).toLocaleString("fr-FR");
 const formatted=(v)=>v?new Date(v).toLocaleDateString("fr-FR"):"—";
@@ -78,7 +81,7 @@ function dashboard(){
  const margin=leads.reduce((s,x)=>s+Number(x.data.revenue||0)-Number(x.data.variableCost||0),0);
  const siteNew=leads.filter(x=>x.data.source==="Site Auréa"&&x.data.status==="Nouveau");
  const kpis=[
-  ["Prospects B2B",prospects.length,"Base commerciale"],["Demandes entrantes",leads.length,"Home et Hosts"],
+  ["Prospects B2B",prospects.length,"Base commerciale"],["Demandes entrantes",leads.length,"Hosts, Home et Sécurité"],
   ["Demandes du site à traiter",siteNew.length,"À qualifier et rappeler"],["CA déclaré",money(ca),"Marge estimée "+money(margin)]
  ];
  const statuses=["Nouveau","Qualifié","Devis envoyé","Réservé","Client"];
