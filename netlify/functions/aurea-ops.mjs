@@ -70,7 +70,7 @@ export default async function handler(req){
       surface_m2,access_method,access_notes,linen_notes,consumables_notes,active,created_at,updated_at,lock_code_ciphertext
       from aurea_ops_properties where id=${id}::uuid limit 1`:
      await db.sql`select id,company_id,name,address,latitude,longitude,bedrooms,bathrooms,
-      surface_m2,access_notes,linen_notes,consumables_notes,active,created_at,updated_at,lock_code_ciphertext
+      surface_m2,access_method,access_notes,linen_notes,consumables_notes,active,created_at,updated_at,lock_code_ciphertext
       from aurea_ops_properties where id=${id}::uuid and company_id=${actor.companyId}::uuid limit 1`;
     if(!rows.length)return response({error:"Logement non autorisé"},404);
     const prop=rows[0],lock_configured=Boolean(prop.lock_code_ciphertext);
