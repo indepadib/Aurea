@@ -1,5 +1,7 @@
 import { isSecurityTarget, contactLinks } from "./outreach.js";
 import { renderScopeTabs, renderContactDirectory } from "./outreach-view.js";
+import { composeOutreach, createMailLinks } from "./outreach.js";
+import { renderLeadWorkspace, renderDossier, renderComposeModal, renderActivityModal } from "./sales-ui.js";
 const sections={
   prospect:{title:"Prospects B2B",subtitle:"Conciergeries, syndics, résidences et contacts B2B qualifiés pour Zenata.",singular:"prospect",icon:"◎",columns:["name","segment","zone","priority","status","sourceUrl","nextAction"],fields:[
     ["name","Entreprise / prospect","text",true],["segment","Segment","select",false,["Conciergerie","Hôte multi-logements","Agence immobilière","Gestionnaire de résidence","Syndic professionnel","Résidence / promoteur","Autre"]],
@@ -13,12 +15,16 @@ const sections={
     ["notes","Notes","textarea"]]},
   lead:{title:"Demandes & réservations",subtitle:"Des premiers messages jusqu'aux clients actifs et à leur marge.",singular:"demande",icon:"◉",columns:["name","segment","zone","source","status","quote","nextAction"],fields:[
     ["name","Nom client / entreprise","text",true],["segment","Service","select",false,["HOSTS","HOME","SECURITE","AUTRE"]],
-    ["zone","Résidence / zone"],["service","Besoin détaillé","textarea"],["status","Statut","select",false,["Nouveau","Qualifié","Devis envoyé","Réservé","Client","Perdu"]],
+    ["zone","Résidence / zone"],["service","Besoin détaillé","textarea"],["status","Statut","select",false,["Nouveau","À qualifier","Contacté","Qualifié","En discussion","Rendez-vous","Devis envoyé","Négociation","Réservé","Client","Perdu"]],
     ["source","Origine","select",false,["Messenger","WhatsApp","Site Auréa","Instagram","Groupe Facebook","Partenaire","Prospection B2B","Autre"]],
     ["nextAction","Prochaine action"],["nextDate","Date prévue","date"],["owner","Responsable"],
     ["email","E-mail","email"],["phone","Téléphone","tel"],
-    ["quote","Devis (DH)","number"],["revenue","CA réalisé (DH)","number"],["variableCost","Coût variable (DH)","number"],
+    ["proposalScope","Périmètre de la proposition","textarea"],["proposalFrequency","Fréquence / volume envisagé"],
+    ["proposalConditions","Conditions et limites de la prestation","textarea"],["proposalValidUntil","Validité du devis","date"],
+    ["quote","Montant proposé (DH)","number"],["revenue","CA réalisé (DH)","number"],["variableCost","Coût variable (DH)","number"],
     ["consent","Base de contact","select",false,["À déterminer","Demande entrante","Consentement obtenu","Ne pas solliciter"]],
+    ["securityCompliance","Vérification gardiennage","select",false,["Non vérifié","En cours","Autorisations vérifiées"]],
+    ["complianceEvidence","Justificatifs / autorisations vérifiées","textarea"],
     ["notes","Notes","textarea"]]},
   partner:{title:"Partenaires",subtitle:"Pressings, agents immobiliers, blanchisseries et apporteurs d'affaires.",singular:"partenaire",icon:"◇",columns:["name","segment","zone","status","nextAction"],fields:[
     ["name","Nom de l'entreprise","text",true],["segment","Type de partenariat","select",false,["Blanchisserie","Pressing","Agence immobilière","Conciergerie","Apporteur d'affaires","Autre"]],
@@ -68,7 +74,7 @@ function showLogin(message=""){
  app.innerHTML='<div class="login-screen"><div class="login-art"><img src="../assets/logo-symbol-clean.png" alt="Auréa"><div><small>Auréa • Gestion interne</small><h1>Votre activité.<br>En un seul endroit.</h1><p>Pilotez vos prospects, vos demandes, vos campagnes et vos opérations commerciales de Zenata.</p></div><small>Espace réservé à l’équipe Auréa</small></div><div class="login-side"><form id="loginForm" class="login-card"><span class="eyebrow">Accès privé</span><h2>Bienvenue chez Auréa.</h2><p>Connectez-vous pour accéder à votre espace commercial.</p>'+(message?'<div class="alert">'+html(message)+'</div>':'')+(!state.configured?'<div class="alert info">L’accès privé n’est pas encore configuré. Définissez les secrets Netlify avant la mise en service.</div>':'')+'<div class="field" style="margin-top:28px"><label for="password">Mot de passe administrateur</label><input id="password" type="password" name="password" autocomplete="current-password" minlength="16" required placeholder="Votre mot de passe"></div><button class="btn" '+(!state.configured?'disabled':'')+' type="submit">Accéder à mon espace →</button><div class="login-meta">Accès chiffré · Données non publiques</div></form></div></div>';
 }
 function shell(){
- app.innerHTML='<div class="shell"><aside class="sidebar"><a class="brand" href="../"><img src="../assets/logo-symbol-clean.png" alt=""><div><strong>AURÉA</strong><small>GROWTH CONSOLE</small></div></a><div class="nav-label">Votre activité</div><nav class="nav-menu" id="nav"><button class="nav-item" data-view="dashboard"><span class="symbol">▤</span>Vue d’ensemble</button>'+keys.map(k=>'<button class="nav-item" data-view="'+k+'"><span class="symbol">'+sections[k].icon+'</span>'+html(sections[k].title)+'</button>').join("")+'</nav><div class="side-foot">Auréa · Zenata<br>CRM interne • v1<button data-action="logout">Se déconnecter ↗</button></div></aside><div class="main"><div class="topbar"><div class="crumb">Auréa / <span id="crumb">Vue d’ensemble</span></div><div class="team">● &nbsp; Espace privé</div></div><main class="page" id="page"></main></div></div>';
+ app.innerHTML='<div class="shell"><aside class="sidebar"><a class="brand" href="../"><img src="../assets/logo-symbol-clean.png" alt=""><div><strong>AURÉA</strong><small>GROWTH CONSOLE</small></div></a><div class="nav-label">Votre activité</div><nav class="nav-menu" id="nav"><button class="nav-item" data-view="dashboard"><span class="symbol">▤</span>Vue d’ensemble</button><button class="nav-item" data-view="clients"><span class="symbol">♙</span>Clients & contrats</button>'+keys.map(k=>'<button class="nav-item" data-view="'+k+'"><span class="symbol">'+sections[k].icon+'</span>'+html(sections[k].title)+'</button>').join("")+'</nav><div class="side-foot">Auréa · Zenata<br>CRM interne • v1<button data-action="logout">Se déconnecter ↗</button></div></aside><div class="main"><div class="topbar"><div class="crumb">Auréa / <span id="crumb">Vue d’ensemble</span></div><div class="team">● &nbsp; Espace privé</div></div><main class="page" id="page"></main></div></div>';
 }
 function layoutTitle(title,description,button){
  return '<div class="page-header"><div><span class="eyebrow">Auréa · Zenata</span><h1>'+html(title)+'</h1><p>'+html(description)+'</p></div>'+(button||"")+'</div>';
@@ -81,9 +87,16 @@ function dashboard(){
  const margin=leads.reduce((s,x)=>s+Number(x.data.revenue||0)-Number(x.data.variableCost||0),0);
  const siteNew=leads.filter(x=>x.data.source==="Site Auréa"&&x.data.status==="Nouveau");
  const kpis=[
-  ["Prospects B2B",prospects.length,"Base commerciale"],["Demandes entrantes",leads.length,"Hosts, Home et Sécurité"],
-  ["Demandes du site à traiter",siteNew.length,"À qualifier et rappeler"],["CA déclaré",money(ca),"Marge estimée "+money(margin)]
+  ["Prospects B2B",prospects.length,"Base de qualification"],["Demandes entrantes",leads.length,"Tous canaux"],
+  ["Demandes site à traiter",siteNew.length,"À qualifier et rappeler"],["Clients confirmés",active,"Réservés / signés"],
+  ["CA déclaré",money(ca),"Marge estimée "+money(margin)]
  ];
+ const today=new Date().toISOString().slice(0,10);
+ const due=[...state.cache.prospect,...state.cache.lead,...state.cache.partner]
+  .filter(x=>x.data.nextDate&&x.data.nextDate<=today&&!["Client","Perdu","Sans suite","Écarté"].includes(x.data.status))
+  .sort((a,b)=>String(a.data.nextDate).localeCompare(String(b.data.nextDate))).slice(0,6);
+ const dueBlock=due.length?'<section class="panel due-panel"><h2>À relancer maintenant</h2><p class="sub">Actions en retard ou arrivées à échéance — aucune relance automatique.</p><div class="due-grid">'+due.map(x=>'<div class="due-item"><div><strong>'+html(x.data.name)+'</strong><small>'+html(x.data.nextAction||"Préciser la prochaine action")+' · '+html(x.data.nextDate)+'</small></div><button class="btn secondary small" data-action="dossier" data-kind="'+html(x.kind)+'" data-id="'+html(x.id)+'">Ouvrir →</button></div>').join("")+'</div></section>':'';
+
  const statuses=["Nouveau","Qualifié","Devis envoyé","Réservé","Client"];
  const counts=statuses.map(s=>leads.filter(x=>x.data.status===s).length);
  const max=Math.max(...counts,1);
@@ -92,7 +105,7 @@ function dashboard(){
  })).sort((a,b)=>(a.date||"9999").localeCompare(b.date||"9999")).slice(0,6);
  return layoutTitle("Vue d’ensemble","Une vision claire de votre activité commerciale et de la prochaine action à entreprendre.",'<button class="btn green" data-action="add" data-kind="lead">+ Nouvelle demande</button>')+
  (siteNew.length?'<section class="site-alert"><div><strong>'+siteNew.length+' demande(s) reçue(s) via le site à traiter</strong><p>Ouvrez les demandes, vérifiez le besoin et préparez un devis. Aucun message n’est envoyé automatiquement.</p></div><button class="btn green small" data-view="lead">Traiter les demandes →</button></section>':'')+
- '<div class="grid4">'+kpis.map(k=>'<article class="kpi"><span class="klabel">'+html(k[0])+'</span><span class="number">'+html(k[1])+'</span><small>'+html(k[2])+'</small></article>').join("")+'</div>'+
+ '<div class="grid5">'+kpis.map(k=>'<article class="kpi"><span class="klabel">'+html(k[0])+'</span><span class="number">'+html(k[1])+'</span><small>'+html(k[2])+'</small></article>').join("")+'</div>'+dueBlock+
  '<div class="dash-grid"><section class="panel"><h2>Pipeline de conversion</h2><p class="sub">Demandes par étape, mises à jour depuis les fiches clients.</p><div class="pipeline">'+statuses.map((s,i)=>'<div class="pipeline-row"><span>'+html(s)+'</span><div class="bar"><i style="width:'+counts[i]/max*100+'%"></i></div><strong>'+counts[i]+'</strong></div>').join("")+'</div><p class="section-caption">Un client apparaît dans son statut actuel, pas dans toutes les étapes précédentes.</p></section>'+
  '<section class="panel"><h2>Prochaines actions</h2><p class="sub">Relances, rendez-vous et tâches prioritaires.</p>'+
  (next.length?next.map(x=>'<div class="next-item"><div><b>'+html(x.name)+'</b><small>'+html(x.action)+'</small></div><span class="pill-date">'+html(x.date||"À planifier")+'</span></div>').join(""):'<div class="empty"><div class="empty-icon">✦</div><h3>Tout commence ici</h3><p>Ajoutez un prospect ou une tâche pour préparer vos premières actions commerciales.</p><button class="btn secondary" data-action="add" data-kind="prospect">+ Ajouter un prospect</button></div>')+
@@ -104,6 +117,10 @@ function fieldText(key,value){
  if(key==="date"||key==="dueDate"||key==="nextDate")return html(formatted(value));
  if(key==="sourceUrl")return /^https?:\/\//i.test(String(value||""))?'<a target="_blank" rel="noopener noreferrer" href="'+html(value)+'">Voir la source ↗</a>':"—";
  return html(value||"—");
+}
+function clientsView(){
+ return layoutTitle("Clients & contrats","Retrouvez les dossiers avec une réservation ou une collaboration réellement confirmée.",'<button class="btn green" data-action="add" data-kind="lead">+ Nouvelle demande</button>')+
+  renderLeadWorkspace(state.cache.lead,true);
 }
 function sectionView(kind){
  const meta=sections[kind],rows=state.cache[kind]||[];
@@ -121,7 +138,7 @@ function sectionView(kind){
  const cols=meta.columns;
  const toolbar='<div class="toolbar"><div class="left"><input class="search-input" id="searchInput" type="search" placeholder="Rechercher dans '+html(meta.title.toLowerCase())+'..." value="'+html(state.search)+'" aria-label="Rechercher"><select class="filter-select" id="statusFilter"><option value="">Tous les statuts</option>'+statuses.map(s=>'<option value="'+html(s)+'" '+(state.status===s?'selected':'')+'>'+html(s)+'</option>').join("")+'</select></div><span class="muted">'+filtered.length+' résultat(s)</span></div>';
  const tip=kind==="lead"?'<div class="inline-guide">⌁ Les demandes du formulaire Auréa arrivent ici après validation par Netlify. Cliquez sur « Qualifier » ou « Modifier » pour préparer la suite.</div>':kind==="prospect"?'<div class="inline-guide">Base issue de sources professionnelles publiques. « À qualifier » signifie qu’aucun contact n’a été établi. La couverture Zenata est à confirmer avant proposition.</div>':'';
- const list=(kind==="prospect"||kind==="partner")?renderContactDirectory(kind,filtered):filtered.length?'<div class="table-wrap"><table><thead><tr>'+cols.map(col=>'<th>'+html(fieldsMap[kind][col]||col)+'</th>').join("")+'<th>Actions</th></tr></thead><tbody>'+
+ const list=(kind==="prospect"||kind==="partner")?renderContactDirectory(kind,filtered):kind==="lead"?renderLeadWorkspace(filtered):filtered.length?'<div class="table-wrap"><table><thead><tr>'+cols.map(col=>'<th>'+html(fieldsMap[kind][col]||col)+'</th>').join("")+'<th>Actions</th></tr></thead><tbody>'+
  filtered.map(x=>'<tr>'+cols.map(col=>'<td class="'+(col==="name"?"strong":"")+'">'+fieldText(col,x.data[col])+'</td>').join("")+
  '<td><div class="cell-actions">'+(kind==="prospect"?'<button class="btn small secondary" data-action="convert" data-kind="prospect" data-id="'+html(x.id)+'">Créer une demande →</button>':kind==="lead"&&x.data.status==="Nouveau"?'<button class="btn small green" data-action="qualify" data-kind="lead" data-id="'+html(x.id)+'">Qualifier</button>':'')+'<button class="icon-button" aria-label="Modifier" data-action="edit" data-kind="'+kind+'" data-id="'+html(x.id)+'">Modifier</button><button class="icon-button" aria-label="Supprimer" data-action="delete" data-kind="'+kind+'" data-id="'+html(x.id)+'">✕</button></div></td></tr>').join("")+'</tbody></table></div>':
  '<div class="table-wrap empty"><div class="empty-icon">◎</div><h3>'+(query||state.status?'Aucun résultat pour ce filtre':'Aucune donnée pour le moment')+'</h3><p>'+(query||state.status?'Changez votre recherche pour afficher vos fiches.':'Créez votre première fiche pour structurer votre activité. Les données seront enregistrées dans la base Auréa.')+'</p><button class="btn secondary" data-action="add" data-kind="'+kind+'">+ Ajouter '+html(meta.singular)+'</button></div>';
@@ -130,11 +147,11 @@ function sectionView(kind){
 function render(){
  if(!state.authenticated)return;
  document.querySelectorAll(".nav-item").forEach(el=>el.classList.toggle("active",el.dataset.view===state.current));
- document.getElementById("crumb").textContent=state.current==="dashboard"?"Vue d’ensemble":sections[state.current].title;
- document.getElementById("page").innerHTML=state.current==="dashboard"?dashboard():sectionView(state.current);
+ document.getElementById("crumb").textContent=state.current==="dashboard"?"Vue d’ensemble":state.current==="clients"?"Clients & contrats":sections[state.current].title;
+ document.getElementById("page").innerHTML=state.current==="dashboard"?dashboard():state.current==="clients"?clientsView():sectionView(state.current);
 }
 function navigate(view){
- if(view!=="dashboard"&&!sections[view])return;
+ if(view!=="dashboard"&&view!=="clients"&&!sections[view])return;
  state.current=view;state.search="";state.status="";state.scope="all";
  history.replaceState(null,"","#"+view);
  render();
@@ -169,9 +186,82 @@ function openModal(kind,item=null,defaults={}){
   return '<div class="field '+(type==="textarea"?"wide":"")+'"><label for="'+id+'">'+html(label)+(required?" *":"")+'</label>'+input+'</div>';
  }).join("");
  const overlay=document.createElement("div");overlay.className="modal-overlay";overlay.id="modalOverlay";
- overlay.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · '+html(meta.title)+'</span><h2 id="modalTitle">'+html(title)+'</h2><p class="desc">Enregistrement privé dans votre espace Auréa.</p></div><button type="button" class="x" aria-label="Fermer" data-action="close">×</button></div><form id="recordForm" data-kind="'+kind+'" data-id="'+html(item?.id||"")+'"><div class="formgrid">'+all+'</div><div class="modal-footer"><button type="button" class="btn secondary" data-action="close">Annuler</button><button type="submit" class="btn green" id="saveButton">Enregistrer →</button></div></form></div>';
+ overlay.innerHTML='<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · '+html(meta.title)+'</span><h2 id="modalTitle">'+html(title)+'</h2><p class="desc">Enregistrement privé dans votre espace Auréa.</p></div><button type="button" class="x" aria-label="Fermer" data-action="close">×</button></div><form id="recordForm" data-kind="'+kind+'" data-id="'+html(item?.id||"")+'" data-origin-prospect="'+html(defaults.originProspectId||"")+'"><div class="formgrid">'+all+'</div><div class="modal-footer"><button type="button" class="btn secondary" data-action="close">Annuler</button><button type="submit" class="btn green" id="saveButton">Enregistrer →</button></div></form></div>';
  document.body.append(overlay);overlay.querySelector("input,select,textarea")?.focus();
 }
+
+const findRecord=(kind,id)=>state.cache[kind]?.find(x=>x.id===id);
+async function openDossier(kind,id){
+ const record=findRecord(kind,id);
+ if(!record)return toast("Cette fiche n’est plus disponible.",true);
+ document.getElementById("dossierOverlay")?.remove();
+ const modal=document.createElement("div");
+ modal.className="modal-overlay";modal.id="dossierOverlay";
+ modal.innerHTML='<section class="modal dossier-modal" role="dialog" aria-modal="true" aria-labelledby="dossierTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · Dossier commercial</span><h2 id="dossierTitle">'+html(record.data.name)+'</h2><p class="desc">Besoins, coordonnées, prochaines étapes et historique des échanges.</p></div><button class="x" type="button" data-action="close-dossier" aria-label="Fermer">×</button></div><div id="dossierContent"><p class="muted">Chargement de l’historique...</p></div></section>';
+ document.body.append(modal);
+ try{
+  const res=await api("/api/aurea-activities?kind="+kind+"&recordId="+encodeURIComponent(id));
+  if(document.getElementById("dossierOverlay")===modal)modal.querySelector("#dossierContent").innerHTML=renderDossier(record,kind,res.items||[]);
+ }catch(err){
+  if(document.getElementById("dossierOverlay")===modal)
+   modal.querySelector("#dossierContent").innerHTML='<div class="alert">'+html("Impossible de lire l’historique : "+err.message)+'</div>';
+ }
+}
+function openCompose(kind,id){
+ const record=findRecord(kind,id);
+ if(!record)return toast("Prospect non trouvé",true);
+ if(record.data.consent==="Ne pas solliciter")return toast("Ce prospect ne doit pas être sollicité.",true);
+ if(!contactLinks(record.data,kind).email)return toast("Adresse email professionnelle manquante : complétez la fiche.",true);
+ document.getElementById("composeOverlay")?.remove();
+ const wrap=document.createElement("div");
+ const mode=["Contacté","En échange","Devis envoyé","Négociation"].includes(record.data.status)?"followup":"intro";
+ wrap.innerHTML=renderComposeModal(record,kind,mode);
+ document.body.append(wrap.firstElementChild);
+ document.getElementById("composeOverlay").dataset.kind=kind;
+ document.getElementById("composeOverlay").dataset.recordId=id;
+ document.getElementById("composerSubject")?.focus();
+}
+function regenerateCompose(){
+ const overlay=document.getElementById("composeOverlay");if(!overlay)return;
+ const record=findRecord(overlay.dataset.kind,overlay.dataset.recordId);if(!record)return;
+ const draft=composeOutreach(record.data,overlay.dataset.kind,document.getElementById("composerMode").value);
+ document.getElementById("composerSubject").value=draft.subject;
+ document.getElementById("composerBody").value=draft.body;
+}
+function currentPreparedMessage(){
+ const overlay=document.getElementById("composeOverlay");
+ if(!overlay)return null;
+ const email=document.getElementById("composerEmail").value.trim();
+ const subject=document.getElementById("composerSubject").value.trim();
+ const body=document.getElementById("composerBody").value.trim();
+ if(!subject||body.length<30)return toast("Personnalisez l’objet et le message avant de l’ouvrir.",true),null;
+ const links=createMailLinks(email,subject,body);
+ if(!links.mailto)return toast("Adresse email invalide.",true),null;
+ return {...links,email,subject,body};
+}
+function openActivity(kind,id){
+ const record=findRecord(kind,id);if(!record)return toast("Fiche introuvable",true);
+ document.getElementById("activityOverlay")?.remove();
+ const holder=document.createElement("div");holder.innerHTML=renderActivityModal(record,kind);
+ document.body.append(holder.firstElementChild);
+ document.getElementById("activityNote")?.focus();
+}
+async function saveActivity(form){
+ const data=Object.fromEntries(new FormData(form).entries());
+ const btn=document.getElementById("activitySave");
+ if(btn){btn.disabled=true;btn.textContent="Enregistrement…";}
+ try{
+  await api("/api/aurea-activities",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({recordId:form.dataset.id,kind:form.dataset.kind,...data})});
+  document.getElementById("activityOverlay")?.remove();
+  await loadAll();
+  if(document.getElementById("dossierOverlay"))await openDossier(form.dataset.kind,form.dataset.id);
+  toast("Échange consigné et prochaine action mise à jour.");
+ }catch(err){
+  if(btn){btn.disabled=false;btn.textContent="Enregistrer l’activité";}
+  toast(err.message,true);
+ }
+}
+
 async function onFormSubmit(event){
  if(event.target.id==="loginForm"){
   event.preventDefault();
@@ -182,6 +272,7 @@ async function onFormSubmit(event){
   }catch(e){showLogin(e.message);}
   return;
  }
+ if(event.target.id==="activityForm"){event.preventDefault();await saveActivity(event.target);return;}
  if(event.target.id!=="recordForm")return;
  event.preventDefault();
  const form=event.target,kind=form.dataset.kind,id=form.dataset.id,data={};
@@ -190,18 +281,47 @@ async function onFormSubmit(event){
    if(value!=="")data[name]=Number(value);
   }else data[name]=String(value);
  }
+ if(kind==="lead" && form.dataset.originProspect)data.originProspectId=form.dataset.originProspect;
  const button=document.getElementById("saveButton");button.disabled=true;button.textContent="Enregistrement…";
  try{
   const endpoint="/api/aurea-crm?kind="+kind+(id?"&id="+encodeURIComponent(id):"");
-  await api(endpoint,{method:id?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data})});
+  const saved=await api(endpoint,{method:id?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({data})});
+  if(kind==="lead" && !id && data.originProspectId && saved.item?.id){
+   const prospect=state.cache.prospect.find(x=>x.id===data.originProspectId);
+   if(prospect){
+    try{
+     await api("/api/aurea-crm?kind=prospect&id="+encodeURIComponent(prospect.id),{
+      method:"PUT",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({data:{name:prospect.data.name,linkedLeadId:saved.item.id}})});
+    }catch(err){toast("Opportunité créée, lien retour du prospect non synchronisé : "+err.message,true);}
+   }
+  }
   document.getElementById("modalOverlay")?.remove();
   toast("Fiche enregistrée");if(kind==="lead"&&state.current==="prospect")navigate("lead");await loadAll();
+  if(document.getElementById("dossierOverlay") && (id||saved.item?.id))await openDossier(kind,id||saved.item.id);
  }catch(e){button.disabled=false;button.textContent="Enregistrer →";toast(e.message,true);}
 }
 async function onClick(event){
  const el=event.target.closest("[data-action],[data-view]");if(!el)return;
  if(el.dataset.view){navigate(el.dataset.view);return;}
  const {action,kind,id}=el.dataset;
+ if(action==="dossier"){await openDossier(kind,id);return;}
+ if(action==="compose"){openCompose(kind,id);return;}
+ if(action==="activity"){openActivity(kind,id);return;}
+ if(action==="close-dossier"){document.getElementById("dossierOverlay")?.remove();return;}
+ if(action==="close-compose"){document.getElementById("composeOverlay")?.remove();return;}
+ if(action==="close-activity"){document.getElementById("activityOverlay")?.remove();return;}
+ if(["open-mailto","open-gmail","copy-email"].includes(action)){
+  const prepared=currentPreparedMessage();if(!prepared)return;
+  if(action==="copy-email"){
+   try{await navigator.clipboard.writeText("Objet : "+prepared.subject+"\n\n"+prepared.body);toast("Message copié. Vérifiez et envoyez depuis votre messagerie.");}
+   catch{toast("Copie impossible : sélectionnez manuellement le texte.",true);}
+  }else if(action==="open-gmail"){
+   const win=window.open(prepared.gmail,"_blank","noopener,noreferrer");
+   if(!win)toast("Gmail a été demandé. Si rien ne s'ouvre, autorisez les nouveaux onglets.",true);
+  }else window.location.href=prepared.mailto;
+  return;
+ }
  if(action==="refresh"){await loadAll();toast("Données actualisées");return;}
  if(action==="scope"){state.scope=el.dataset.scope||"all";render();return;}
  if(action==="contacted"){
@@ -218,10 +338,11 @@ async function onClick(event){
  if(action==="add"){openModal(kind,null,kind==="lead"?{status:"Nouveau",source:"Autre"}:kind==="prospect"?{status:"À qualifier",consent:"À déterminer"}:{});return;}
  if(action==="convert"){
   const prospect=state.cache.prospect.find(x=>x.id===id);if(!prospect)return;
-   const existing=state.cache.lead.find(x=>x.data.source==="Prospection B2B"&&x.data.name.toLowerCase()===prospect.data.name.toLowerCase());
+   const existing=state.cache.lead.find(x=>x.data.originProspectId===prospect.id||(x.data.source==="Prospection B2B"&&x.data.name.toLowerCase()===prospect.data.name.toLowerCase()));
    if(existing){navigate("lead");openModal("lead",existing);toast("Cette entreprise a déjà une demande : fiche existante ouverte");return;}
   openModal("lead",null,{
    name:prospect.data.name,segment:isSecurityTarget(prospect.data)?"SECURITE":"HOSTS",zone:prospect.data.zone,
+   originProspectId:prospect.id,
    service:isSecurityTarget(prospect.data)?"Entretien et gardiennage (autorisation à vérifier)":"Ménage et linge pour locations saisonnières",
    source:"Prospection B2B",status:"Nouveau",
    consent:prospect.data.consent==="Demande entrante"?"Demande entrante":"À déterminer",
@@ -263,8 +384,32 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
  if(e.target.id==="statusFilter"){state.status=e.target.value;render();}
+ if(e.target.id==="composerMode")regenerateCompose();
+ if(e.target.id==="activityResult"){
+  const suggestions={
+   email_envoye:["Email","Relancer si aucune réponse",4],
+   appel_effectue:["Téléphone","Résumer l’échange et vérifier la suite",2],
+   reponse_recue:["Email","Proposer un échange ou préparer la proposition",2],
+   rendezvous_confirme:["Réunion","Préparer le rendez-vous et le cadrage",1],
+   devis_transmis:["Email","Vérifier la réception et le retour sur le devis",4],
+   vente_conclue:["Réunion","Organiser la première prestation après validation",1],
+   non_interesse:["Autre","",0],
+   note:["Interne","",0]
+  };
+  const picked=suggestions[e.target.value];if(!picked)return;
+  const channel=document.getElementById("activityChannel");
+  const next=document.getElementById("activityNext"),date=document.getElementById("activityDate");
+  const channelMap={Email:"email",Téléphone:"telephone",Réunion:"reunion",Interne:"interne",Autre:"autre"};
+  if(channel)channel.value=channelMap[picked[0]]||"autre";
+  if(next&&!next.value)next.value=picked[1];
+  if(date&&!date.value&&picked[2]){
+   const day=new Date();day.setDate(day.getDate()+picked[2]);
+   const yyyy=day.getFullYear(),mm=String(day.getMonth()+1).padStart(2,"0"),dd=String(day.getDate()).padStart(2,"0");
+   date.value=yyyy+"-"+mm+"-"+dd;
+  }
+ }
 });
-document.addEventListener("keydown",e=>{if(e.key==="Escape")document.getElementById("modalOverlay")?.remove();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")for(const id of ["modalOverlay","composeOverlay","activityOverlay","dossierOverlay"])document.getElementById(id)?.remove();});
 async function init(){
  try{
   const session=await api("/api/aurea-auth");

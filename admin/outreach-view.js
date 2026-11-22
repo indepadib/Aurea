@@ -18,17 +18,18 @@ function renderCard(kind,item){
  const securityChip=kind==="prospect"&&security?'<span class="tag amber">Syndic / résidence</span>':"";
  const emailText=l.email?'<b>'+h(l.email)+'</b>':'<span class="muted">Email non identifié</span>';
  const phoneText=l.phone?'<b>'+h(d.phone)+'</b>':'<span class="muted">Téléphone à rechercher</span>';
- const mail=l.email?'<a class="btn small green" href="'+h(l.mailto)+'" title="Le message reste un brouillon jusqu’à son envoi">✉ Préparer un mail</a><a class="btn small secondary" href="'+h(l.gmail)+'" target="_blank" rel="noopener noreferrer">Gmail ↗</a>':'';
+ const mail=l.email?'<button class="btn small green" data-action="compose" data-kind="'+kind+'" data-id="'+id+'">✉ Rédiger une proposition</button>':'';
  const phone=l.phone?'<a class="btn small secondary" href="'+h(l.telephone)+'">☎ Appeler</a>':'';
  const convert=kind==="prospect"?'<button class="btn small secondary" data-action="convert" data-kind="prospect" data-id="'+id+'">Créer une opportunité</button>':'';
+ const dossier='<button class="btn small secondary" data-action="dossier" data-kind="'+kind+'" data-id="'+id+'">Dossier & historique</button>';
  const source=/^https?:\/\//i.test(d.contactSource||"")?d.contactSource:l.website;
  const sourceLink=source?'<a target="_blank" rel="noopener noreferrer" href="'+h(source)+'">Source de contact ↗</a>':'<span>Source à compléter</span>';
- const contacted=d.status==="Contacté"?'<span class="tag green">Contact effectué'+(d.contactedAt?" · "+h(d.contactedAt):"")+'</span>':'<button class="text-action" data-action="contacted" data-kind="'+kind+'" data-id="'+id+'">✓ Marquer contacté</button>';
+ const contacted='<button class="text-action" data-action="activity" data-kind="'+kind+'" data-id="'+id+'">+ Consigner un échange réel</button>';
  return '<article class="outreach-card">'+
   '<div class="outreach-head"><div><div class="outreach-badges">'+status+priority+securityChip+'</div><h3>'+h(d.name)+'</h3><p>'+h(d.segment||"Professionnel")+' · '+h(d.zone||"Zone à vérifier")+'</p></div></div>'+
   '<p class="outreach-context">'+h(d.evidence||d.notes||"Vérifier le besoin et les coordonnées professionnelles.")+'</p>'+
   '<div class="outreach-contact"><div><small>EMAIL</small>'+emailText+'</div><div><small>TÉLÉPHONE</small>'+phoneText+'</div></div>'+
-  '<div class="outreach-buttons">'+mail+phone+convert+'<button class="btn small secondary" data-action="edit" data-kind="'+kind+'" data-id="'+id+'">Modifier</button></div>'+
+  '<div class="outreach-buttons">'+mail+phone+dossier+convert+'<button class="btn small secondary" data-action="edit" data-kind="'+kind+'" data-id="'+id+'">Modifier</button></div>'+
   '<div class="outreach-footer"><div>'+sourceLink+(d.contactVerifiedAt?'<span> · vérifié le '+h(d.contactVerifiedAt)+'</span>':"")+'</div><div class="outreach-actions-follow"><small>'+h(d.nextAction||"Prochaine action à planifier")+'</small>'+contacted+'</div></div>'+
  '</article>';
 }

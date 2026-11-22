@@ -3,8 +3,8 @@ import {isAuthorized,sameOrigin,response} from "../../lib/aurea-auth.mjs";
 
 const kinds=new Set(["prospect","lead","partner","content","task"]);
 const fields={
- prospect:["name","segment","zone","evidence","priority","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent","contactedAt","lastContactChannel"],
- lead:["name","segment","zone","service","status","source","nextAction","nextDate","owner","notes","email","phone","quote","revenue","variableCost","consent"],
+ prospect:["name","segment","zone","evidence","priority","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent","contactedAt","lastContactChannel","linkedLeadId"],
+ lead:["name","segment","zone","service","status","source","nextAction","nextDate","owner","notes","email","phone","quote","revenue","variableCost","consent","originProspectId","securityCompliance","complianceEvidence","proposalScope","proposalFrequency","proposalConditions","proposalValidUntil","contactedAt","lastContactChannel"],
  partner:["name","segment","zone","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent","contactedAt","lastContactChannel"],
  content:["name","segment","channel","format","date","status","cta","copy","owner","notes"],
  task:["name","segment","status","priority","dueDate","owner","notes"]
@@ -41,6 +41,10 @@ export default async function handler(req){
   if(Number(req.headers.get("content-length")||0)>12000)return response({error:"Taille de requête excessive"},413);
   const body=await req.json(),data=clean(kind,body.data);
   if(!data)return response({error:"Un nom ou titre est obligatoire"},400);
+  // Security operations cannot be represented as confirmed contracts without documented approvals.
+  if(kind==="lead" && ["Client","Réservé"].includes(data.status) && data.segment==="SECURITE" &&
+   (data.securityCompliance!=="Autorisations vérifiées" || (data.complianceEvidence||"").length<10))
+   return response({error:"Gardiennage : autorisations et justificatifs à confirmer avant de déclarer un client."},409);
   if(req.method==="POST"){
    const rows=await db.sql`insert into aurea_crm_records(kind,data) values (${kind},${JSON.stringify(data)}::jsonb) returning id,kind,data,created_at,updated_at`;
    return response({item:rows[0]},201);
