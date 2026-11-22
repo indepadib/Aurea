@@ -14,7 +14,7 @@ export default async function handler(req){
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>250||typeof password!=="string"||password.length>256)
    return response({error:"Identifiants incorrects"},401);
   const db=getDatabase();
-  const rows=await db.sql`select id,name,password_hash from aurea_ops_companies where lower(email)=${{email} and active=true limit 1`;
+  const rows=await db.sql`select id,name,password_hash from aurea_ops_companies where lower(email)=${email} and active=true limit 1`;
   if(!rows.length||!verifyPassword(password,rows[0].password_hash))return response({error:"Identifiants incorrects"},401);
   return response({authenticated:true,company:rows[0].name},200,{"Set-Cookie":hostCookie(rows[0].id)});
  }catch(e){
