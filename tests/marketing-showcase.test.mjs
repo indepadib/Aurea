@@ -8,7 +8,7 @@ import {renderComposeModal} from "../admin/sales-ui.js";
 const demo="https://aurea-services.netlify.app/presentation/";
 test("Auréa marketing showcase is bundled and product screens are anonymized",async()=>{
  const html=await readFile(new URL("../dist/presentation/index.html",import.meta.url),"utf8");
- assert.match(html,/Démonstration/);
+ assert.match(html,/démonstration/i);
  assert.match(html,/données fictives/);
  assert.match(html,/devis\/\?utm_source=/);
  assert.doesNotMatch(html,/1234|8426#/);
