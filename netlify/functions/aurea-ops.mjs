@@ -51,9 +51,14 @@ export default async function handler(req){
      await db.sql`select * from aurea_ops_properties where company_id=${actor.companyId}::uuid order by name limit 600`;
     const teams=admin?await db.sql`select id,name,active from aurea_ops_teams order by name limit 120`:[];
     const agents=admin?await db.sql`select a.id,a.full_name,a.email,a.team_id,a.active,a.created_at,t.name as team_name from aurea_ops_agents a join aurea_ops_teams t on t.id=a.team_id order by a.created_at desc limit 300`:[];
+    const incidents=admin?await db.sql`select e.job_id,e.created_at,e.detail,p.name as property_name,c.name as company_name
+      from aurea_ops_job_events e join aurea_ops_jobs j on j.id=e.job_id
+      join aurea_ops_properties p on p.id=j.property_id join aurea_ops_companies c on c.id=j.company_id
+      where e.event='incident_reported' and e.created_at>=now()-interval '7 days'
+      order by e.created_at desc limit 60`:[];
     const jobs=admin?await db.sql`select j.*,p.name as property_name,p.address as property_address,p.latitude,p.longitude,c.name as company_name,t.name as team_name from aurea_ops_jobs j join aurea_ops_properties p on p.id=j.property_id join aurea_ops_companies c on c.id=j.company_id left join aurea_ops_teams t on t.id=j.team_id where j.start_at>=now()-interval '30 days' and j.start_at<=now()+interval '180 days' order by j.start_at limit 1500`:
      await db.sql`select j.*,p.name as property_name,p.address as property_address,p.latitude,p.longitude from aurea_ops_jobs j join aurea_ops_properties p on p.id=j.property_id where j.company_id=${actor.companyId}::uuid and j.start_at>=now()-interval '30 days' and j.start_at<=now()+interval '180 days' order by j.start_at limit 1000`;
-    return response({companies,properties,teams,agents,jobs,role:actor.role});
+    return response({companies,properties,teams,agents,incidents,jobs,role:actor.role});
    }
    if(resource==="history"){
     const id=url.searchParams.get("job");
