@@ -17,7 +17,22 @@ export function composeOutreach(data={},kind="prospect"){
  const security=isSecurityTarget(data);
  const partner=kind==="partner" && /blanchisserie|pressing/i.test(data.segment||"");
  let subject,body;
- if(security){
+ if(kind==="lead"){
+  subject="Suite à votre demande sur Auréa";
+  body=[
+   "Bonjour,",
+   "",
+   "Merci pour votre demande auprès d’Auréa.",
+   "",
+   "Nous revenons vers vous afin de préciser votre besoin, la localisation et les dates souhaitées. Après vérification de nos disponibilités, nous pourrons vous transmettre une proposition adaptée.",
+   "",
+   "Pouvez-vous nous indiquer le créneau qui vous conviendrait pour un court échange ?",
+   "",
+   "Bien cordialement,",
+   "L’équipe Auréa",
+   "https://aurea-services.netlify.app/"
+  ].join("\n");
+ }else if(security){
   subject="Collaboration possible — entretien et gardiennage à Zenata | Auréa";
   body=[
    "Bonjour,",
