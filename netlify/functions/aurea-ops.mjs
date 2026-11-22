@@ -7,7 +7,7 @@ const identifier=(v)=>UUID.test(String(v||""));
 const allowed=(r,act)=>act==="admin"||act==="concierge";
 const failure=(e)=>{
  console.error("aurea-ops:",e?.code||"unavailable");
- if(e?.code==="23P01")return response({error:"Conflit : cette équipe est déjà affectée pendant ce créneau."},409);
+ if(e?.code==="23P01")return response({error:"Créneau indisponible : ce logement ou cette équipe est déjà réservé(e)."},409);
  if(e?.code==="23505")return response({error:"Un enregistrement avec ce nom ou cet e-mail existe déjà."},409);
  if(e?.code==="23503")return response({error:"Référence invalide."},409);
  return response({error:"Opération indisponible. Vérifiez la base et ses migrations."},503);
