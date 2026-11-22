@@ -45,7 +45,7 @@ export function renderDossier(record,kind,activities=[]){
 export function renderComposeModal(record,kind,mode="intro"){
  const d=record.data||{},links=contactLinks(d,kind,mode);
  const pastContact=Boolean(d.contactedAt || ["Contacté","En échange","Rendez-vous","Devis envoyé","Client"].includes(d.status));
- const modes=outreachModes.filter(m=>(kind!=="lead"||m.value!=="followup")&&(m.value!=="followup"||pastContact));
+ const modes=outreachModes.filter(m=>m.value!=="followup"||pastContact);
  return '<div class="modal-overlay" id="composeOverlay"><section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="composerTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · Prospection commerciale</span><h2 id="composerTitle">Rédiger pour '+h(d.name)+'</h2><p class="desc">Vérifiez les informations, personnalisez le message et choisissez votre messagerie.</p></div><button class="x" type="button" data-action="close-compose" aria-label="Fermer">×</button></div>'+
  '<div class="composer-grid"><label class="field"><span>Étape du parcours</span><select id="composerMode">'+modes.map(m=>'<option value="'+m.value+'" '+(m.value===mode?'selected':'')+'>'+h(m.label)+'</option>').join("")+'</select></label><label class="field"><span>Destinataire</span><input id="composerEmail" type="email" value="'+h(links.email)+'" placeholder="Adresse professionnelle à confirmer"></label></div>'+
  '<label class="field"><span>Objet de l’email</span><input id="composerSubject" value="'+h(links.subject)+'" required></label><label class="field"><span>Message personnalisé</span><textarea id="composerBody" rows="17">'+h(links.body)+'</textarea></label>'+
