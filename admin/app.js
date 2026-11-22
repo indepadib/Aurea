@@ -207,7 +207,8 @@ function openCompose(kind,id){
  if(!contactLinks(record.data,kind).email)return toast("Adresse email professionnelle manquante : complétez la fiche.",true);
  document.getElementById("composeOverlay")?.remove();
  const wrap=document.createElement("div");
- wrap.innerHTML=renderComposeModal(record,kind);
+ const mode=["Contacté","En échange","Devis envoyé","Négociation"].includes(record.data.status)?"followup":"intro";
+ wrap.innerHTML=renderComposeModal(record,kind,mode);
  document.body.append(wrap.firstElementChild);
  document.getElementById("composeOverlay").dataset.kind=kind;
  document.getElementById("composeOverlay").dataset.recordId=id;
