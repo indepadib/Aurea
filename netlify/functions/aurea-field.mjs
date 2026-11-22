@@ -18,7 +18,7 @@ export default async function handler(req){
    if(resource==="overview"){
     const jobs=await db.sql`select j.id,j.start_at,j.end_at,j.checkout_at,j.next_checkin_at,j.status,j.notes,
      j.quality_notes,j.checklist,j.started_at,j.qa_submitted_at,
-     p.name as property_name,p.address,p.latitude,p.longitude,p.linen_notes,p.consumables_notes,
+     p.name as property_name,p.address,p.latitude,p.longitude,p.access_method,(p.lock_code_ciphertext is not null) as lock_configured,p.linen_notes,p.consumables_notes,
      case when j.status in ('assigned','in_progress','qa') then p.access_notes else '' end as access_notes,
      t.name as team_name from aurea_ops_jobs j
      join aurea_ops_properties p on p.id=j.property_id
