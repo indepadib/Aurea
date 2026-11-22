@@ -384,6 +384,29 @@ document.addEventListener("input",e=>{
 document.addEventListener("change",e=>{
  if(e.target.id==="statusFilter"){state.status=e.target.value;render();}
  if(e.target.id==="composerMode")regenerateCompose();
+ if(e.target.id==="activityResult"){
+  const suggestions={
+   email_envoye:["Email","Relancer si aucune réponse",4],
+   appel_effectue:["Téléphone","Résumer l’échange et vérifier la suite",2],
+   reponse_recue:["Email","Proposer un échange ou préparer la proposition",2],
+   rendezvous_confirme:["Réunion","Préparer le rendez-vous et le cadrage",1],
+   devis_transmis:["Email","Vérifier la réception et le retour sur le devis",4],
+   vente_conclue:["Réunion","Organiser la première prestation après validation",1],
+   non_interesse:["Autre","",0],
+   note:["Interne","",0]
+  };
+  const picked=suggestions[e.target.value];if(!picked)return;
+  const channel=document.getElementById("activityChannel");
+  const next=document.getElementById("activityNext"),date=document.getElementById("activityDate");
+  const channelMap={Email:"email",Téléphone:"telephone",Réunion:"reunion",Interne:"interne",Autre:"autre"};
+  if(channel)channel.value=channelMap[picked[0]]||"autre";
+  if(next&&!next.value)next.value=picked[1];
+  if(date&&!date.value&&picked[2]){
+   const day=new Date();day.setDate(day.getDate()+picked[2]);
+   const yyyy=day.getFullYear(),mm=String(day.getMonth()+1).padStart(2,"0"),dd=String(day.getDate()).padStart(2,"0");
+   date.value=yyyy+"-"+mm+"-"+dd;
+  }
+ }
 });
 document.addEventListener("keydown",e=>{if(e.key==="Escape")for(const id of ["modalOverlay","composeOverlay","activityOverlay","dossierOverlay"])document.getElementById(id)?.remove();});
 async function init(){
