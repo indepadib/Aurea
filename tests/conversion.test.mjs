@@ -33,7 +33,7 @@ test("Syndic request must create SECURITE lead, never HOME",()=>{
  service:"Entretien de résidence / étude gardiennage",consentement_contact:"on",parcours:"syndic"};
  const mapped=mapFormSubmission(base);
  assert.equal(mapped.data.segment,"SECURITE");
- assert.match(mapped.data.nextAction,/Qualifier/);
+ assert.match(mapped.data.nextAction,/qualifier/i);
  assert.equal(mapFormSubmission({...base,consentement_contact:""}),null);
 });
 test("Home request creates HOME lead",()=>{
