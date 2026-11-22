@@ -109,7 +109,7 @@ function sectionView(kind){
  const meta=sections[kind],rows=state.cache[kind]||[];
  const query=state.search.trim().toLowerCase();
  const statuses=[...new Set(rows.map(r=>r.data.status).filter(Boolean))];
- const filtered=rows.filter(x=>(!query||Object.values(x.data).some(v=>String(v).toLowerCase().includes(query)))&&(!state.status||x.data.status===state.status))
+ const filtered=rows.filter(x=>(!query||Object.values(x.data).some(v=>String(v).toLowerCase().includes(query)))&&(!state.status||x.data.status===state.status)&&(state.scope==="all"||(state.scope==="security"&&isSecurityTarget(x.data))||(state.scope==="hosts"&&!isSecurityTarget(x.data))))
  .sort((a,b)=>{
   if(kind==="prospect") return ({A:0,B:1,C:2}[a.data.priority]??3)-({A:0,B:1,C:2}[b.data.priority]??3);
   if(kind==="lead"){
@@ -121,11 +121,11 @@ function sectionView(kind){
  const cols=meta.columns;
  const toolbar='<div class="toolbar"><div class="left"><input class="search-input" id="searchInput" type="search" placeholder="Rechercher dans '+html(meta.title.toLowerCase())+'..." value="'+html(state.search)+'" aria-label="Rechercher"><select class="filter-select" id="statusFilter"><option value="">Tous les statuts</option>'+statuses.map(s=>'<option value="'+html(s)+'" '+(state.status===s?'selected':'')+'>'+html(s)+'</option>').join("")+'</select></div><span class="muted">'+filtered.length+' résultat(s)</span></div>';
  const tip=kind==="lead"?'<div class="inline-guide">⌁ Les demandes du formulaire Auréa arrivent ici après validation par Netlify. Cliquez sur « Qualifier » ou « Modifier » pour préparer la suite.</div>':kind==="prospect"?'<div class="inline-guide">Base issue de sources professionnelles publiques. « À qualifier » signifie qu’aucun contact n’a été établi. La couverture Zenata est à confirmer avant proposition.</div>':'';
- const list=filtered.length?'<div class="table-wrap"><table><thead><tr>'+cols.map(col=>'<th>'+html(fieldsMap[kind][col]||col)+'</th>').join("")+'<th>Actions</th></tr></thead><tbody>'+
+ const list=(kind==="prospect"||kind==="partner")?renderContactDirectory(kind,filtered):filtered.length?'<div class="table-wrap"><table><thead><tr>'+cols.map(col=>'<th>'+html(fieldsMap[kind][col]||col)+'</th>').join("")+'<th>Actions</th></tr></thead><tbody>'+
  filtered.map(x=>'<tr>'+cols.map(col=>'<td class="'+(col==="name"?"strong":"")+'">'+fieldText(col,x.data[col])+'</td>').join("")+
  '<td><div class="cell-actions">'+(kind==="prospect"?'<button class="btn small secondary" data-action="convert" data-kind="prospect" data-id="'+html(x.id)+'">Créer une demande →</button>':kind==="lead"&&x.data.status==="Nouveau"?'<button class="btn small green" data-action="qualify" data-kind="lead" data-id="'+html(x.id)+'">Qualifier</button>':'')+'<button class="icon-button" aria-label="Modifier" data-action="edit" data-kind="'+kind+'" data-id="'+html(x.id)+'">Modifier</button><button class="icon-button" aria-label="Supprimer" data-action="delete" data-kind="'+kind+'" data-id="'+html(x.id)+'">✕</button></div></td></tr>').join("")+'</tbody></table></div>':
  '<div class="table-wrap empty"><div class="empty-icon">◎</div><h3>'+(query||state.status?'Aucun résultat pour ce filtre':'Aucune donnée pour le moment')+'</h3><p>'+(query||state.status?'Changez votre recherche pour afficher vos fiches.':'Créez votre première fiche pour structurer votre activité. Les données seront enregistrées dans la base Auréa.')+'</p><button class="btn secondary" data-action="add" data-kind="'+kind+'">+ Ajouter '+html(meta.singular)+'</button></div>';
- return layoutTitle(meta.title,meta.subtitle,'<div class="header-actions"><button class="btn secondary" data-action="refresh">↻ Actualiser</button><button class="btn green" data-action="add" data-kind="'+kind+'">+ Nouveau '+html(meta.singular)+'</button></div>')+tip+toolbar+list;
+ return layoutTitle(meta.title,meta.subtitle,'<div class="header-actions"><button class="btn secondary" data-action="refresh">↻ Actualiser</button><button class="btn green" data-action="add" data-kind="'+kind+'">+ Nouveau '+html(meta.singular)+'</button></div>')+tip+(kind==="prospect"?renderScopeTabs(state.scope):"")+toolbar+list;
 }
 function render(){
  if(!state.authenticated)return;
@@ -135,7 +135,7 @@ function render(){
 }
 function navigate(view){
  if(view!=="dashboard"&&!sections[view])return;
- state.current=view;state.search="";state.status="";
+ state.current=view;state.search="";state.status="";state.scope="all";
  history.replaceState(null,"","#"+view);
  render();
 }
@@ -203,13 +203,26 @@ async function onClick(event){
  if(el.dataset.view){navigate(el.dataset.view);return;}
  const {action,kind,id}=el.dataset;
  if(action==="refresh"){await loadAll();toast("Données actualisées");return;}
+ if(action==="scope"){state.scope=el.dataset.scope||"all";render();return;}
+ if(action==="contacted"){
+  const item=state.cache[kind]?.find(x=>x.id===id);
+  if(!item || !confirm("Confirmez-vous avoir réellement contacté "+item.data.name+" ? Ouvrir un brouillon ne compte pas comme un envoi."))return;
+  try{
+   const today=new Date().toISOString().slice(0,10);
+   await api("/api/aurea-crm?kind="+kind+"&id="+encodeURIComponent(id),{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({data:{...item.data,status:"Contacté",contactedAt:today,lastContactChannel:"Saisie manuelle",nextAction:"Prévoir un suivi uniquement si approprié"}})});
+   toast("Contact enregistré");await loadAll();
+  }catch(e){toast(e.message,true);}
+  return;
+ }
  if(action==="add"){openModal(kind,null,kind==="lead"?{status:"Nouveau",source:"Autre"}:kind==="prospect"?{status:"À qualifier",consent:"À déterminer"}:{});return;}
  if(action==="convert"){
   const prospect=state.cache.prospect.find(x=>x.id===id);if(!prospect)return;
    const existing=state.cache.lead.find(x=>x.data.source==="Prospection B2B"&&x.data.name.toLowerCase()===prospect.data.name.toLowerCase());
    if(existing){navigate("lead");openModal("lead",existing);toast("Cette entreprise a déjà une demande : fiche existante ouverte");return;}
   openModal("lead",null,{
-   name:prospect.data.name,segment:"HOSTS",zone:prospect.data.zone,
+   name:prospect.data.name,segment:isSecurityTarget(prospect.data)?"SECURITE":"HOSTS",zone:prospect.data.zone,
+   service:isSecurityTarget(prospect.data)?"Entretien et gardiennage (autorisation à vérifier)":"Ménage et linge pour locations saisonnières",
    source:"Prospection B2B",status:"Nouveau",
    consent:prospect.data.consent==="Demande entrante"?"Demande entrante":"À déterminer",
    nextAction:"Qualifier l’intérêt B2B avant proposition",
