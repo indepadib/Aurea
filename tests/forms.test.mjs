@@ -16,7 +16,7 @@ test("verified form submission maps to a HOSTS lead",()=>{
  assert.equal(mapped.data.segment,"HOSTS");
  assert.equal(mapped.data.source,"Site Auréa");
  assert.equal(mapped.data.consent,"Demande entrante");
- assert.match(mapped.sourceKey,/^netlify-form:[a-f0-9]{64}$/);
+ assert.match(mapped.sourceKey,/^netlify-form:legacy:[a-f0-9]{64}$/);
 });
 test("form intake requires consent and valid contact",()=>{
  assert.equal(mapFormSubmission({...raw,consentement_contact:""}),null);
@@ -27,5 +27,14 @@ test("idempotence key is stable for duplicate delivery",()=>{
  assert.equal(mapFormSubmission(raw).sourceKey,mapFormSubmission({...raw}).sourceKey);
 });
 test("personal home request maps to HOME",()=>{
- assert.equal(mapFormSubmission({...raw,profil:"Particulier"}).data.segment,"HOME");
+ assert.equal(mapFormSubmission({...raw,profil:"Particulier",service:"Ménage à domicile"}).data.segment,"HOME");
+});
+test("different form attempts create different CRM leads even with identical details",()=>{
+ const a=mapFormSubmission({...raw,request_id:"014f993a-bf7d-4f36-a6da-f86a8dcf17c0"});
+ const b=mapFormSubmission({...raw,request_id:"0d4d5da5-d9fa-4e41-999a-dbeaa2d8f5f4"});
+ assert.notEqual(a.sourceKey,b.sourceKey);
+ assert.equal(a.sourceKey,mapFormSubmission({...raw,request_id:"014f993a-bf7d-4f36-a6da-f86a8dcf17c0"}).sourceKey);
+});
+test("form mapping cannot turn an unrelated form into a CRM lead",()=>{
+ assert.equal(mapFormSubmission({...raw,"form-name":"newsletter"}),null);
 });
