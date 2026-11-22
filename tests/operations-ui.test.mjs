@@ -42,7 +42,9 @@ test("Auréa Hosts renders private calendar, property and booking actions",async
   assert.ok(doc.querySelector('[name="checkout"]'));
   assert.ok(doc.querySelector('[name="checkin"]'));
   assert.equal(doc.querySelector('[data-action="create-company"]'),null);
+  await new Promise(resolve=>setTimeout(resolve,20));
   doc.querySelector('#overlay [data-action="close"]').click();
+  await new Promise(resolve=>setTimeout(resolve,20));
   doc.querySelector('[data-action="job"]').click();
   await new Promise(resolve=>setTimeout(resolve,30));
   assert.ok(doc.querySelector('form[data-form="incident"]'));
