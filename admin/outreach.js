@@ -2,6 +2,13 @@
 const isMail = value => /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(String(value||"").trim());
 const tidy = (value,max=200) => String(value||"").replace(/[\r\n]+/g," ").trim().slice(0,max);
 const domain = "https://aurea-services.netlify.app/";
+const hostsDemo = domain+"presentation/";
+const hostsScreens = {
+ planning:hostsDemo+"screens/hosts.svg",
+ apartment:hostsDemo+"screens/appartement.svg",
+ field:hostsDemo+"screens/field.svg",
+ operations:hostsDemo+"screens/operations.svg"
+};
 const closing=["","Bien cordialement,","L’équipe Auréa","Services aux logements et résidences • Zenata",domain].join("\n");
 export const isSecurityTarget = data => /syndic|copropri|résidence|residence|gardiennage|sécurité|securite/i.test(String(data?.segment||"")+" "+String(data?.service||""));
 export const normalizedPhone = value => {
@@ -21,27 +28,36 @@ export const outreachModes = [
 ];
 
 function introHosts(company,local){
- const qualification=local
- ?"Nous cherchons à accompagner les professionnels qui gèrent des logements en location courte durée à Zenata."
- :"Je souhaitais savoir si vous gérez déjà des logements en location courte durée à Zenata ou si cette zone fait partie de votre développement.";
+ const line=local
+  ?"Nous nous intéressons aux conciergeries et gestionnaires de logements de Zenata qui doivent enchaîner plusieurs rotations, parfois le même jour."
+  :"Je souhaitais vérifier si vous gérez actuellement des logements à Zenata ou si cette zone est prévue dans votre développement.";
  return {
-  subject:"Zenata | Une solution locale pour les rotations Airbnb / Booking — Auréa",
+  subject:"Zenata | Vos ménages Airbnb / Booking avec contrôle photo — Auréa",
   body:[
    "Bonjour à l’équipe "+company+",","",
-   "Je me permets de vous contacter au nom d’Auréa. "+qualification,
+   "Je vous contacte pour vous proposer un renfort opérationnel sur vos rotations Airbnb / Booking. "+line,
    "",
-   "Entre deux réservations, le vrai enjeu est de remettre le logement en état dans un délai court, sans multiplier les interlocuteurs ni sacrifier l’expérience du voyageur.",
+   "Entre le départ d’un voyageur et l’arrivée du suivant, l’enjeu n’est pas seulement de trouver une équipe de ménage. Il faut garantir une organisation claire, retrouver les bonnes consignes et pouvoir vérifier la prestation sans multiplier les relances.",
    "",
-   "Auréa propose un dispositif opérationnel adaptable à vos appartements :",
-   "• ménage de sortie et préparation avant l’arrivée ;",
-   "• lits préparés, linge hôtelier et blanchisserie selon le besoin ;",
-   "• réassort des essentiels (papier toilette, savon, gel douche, eau, café) ;",
-   "• contrôle de fin d’intervention, photos et signalement des anomalies.",
+   "Auréa accompagne les professionnels sur les opérations terrain :",
+   "• ménage de sortie et remise en état avant check-in ;",
+   "• préparation du linge hôtelier, lits et blanchisserie selon le périmètre ;",
+   "• réassort des consommables prévus (papier toilette, savon, gel douche, eau, café) ;",
+   "• contrôle de fin d’intervention avec checklist, photos après ménage et remontée des anomalies.",
    "",
-   "Nous pouvons étudier une organisation à la prestation ou récurrente, selon vos rotations et les délais à couvrir. Le périmètre et le prix sont définis après échange, en tenant compte de la surface et du niveau de service.",
+   "Nous avons également développé Auréa Hosts, un espace de suivi permettant de retrouver le planning des ménages, chaque fiche appartement et ses consignes, ainsi que les photos de contrôle. Le code de serrure éventuel est conservé séparément et accessible uniquement aux personnes autorisées pendant leur mission.",
    "",
-   "Seriez-vous disponible pour un échange de 15 minutes cette semaine ? Nous pourrions identifier 1 ou 2 logements pilotes à Zenata et étudier une première prestation test, sans engagement de volume.",
-   closing
+   "Voici des visuels de démonstration, avec données fictives :",
+   "• Présentation de l’outil et du fonctionnement : "+hostsDemo,
+   "• Écran 1 — Planning des rotations : "+hostsScreens.planning,
+   "• Écran 2 — Fiche appartement et preuves après ménage : "+hostsScreens.apartment,
+   "• Écran 3 — Suivi de la prestation par l’équipe : "+hostsScreens.field,
+   "",
+   "L’idée ne serait pas de bouleverser votre organisation : nous pourrions étudier un premier test sur 1 ou 2 appartements, à la prestation ou de manière récurrente, après vérification des disponibilités et du périmètre.",
+   "",
+   "Seriez-vous disponible pour un échange de 15 minutes cette semaine ? Vous pourrez me dire comment vous organisez les ménages aujourd’hui et les points qui vous font perdre le plus de temps.",
+   "",
+   "Bien cordialement,","L’équipe Auréa","Services aux logements et résidences · Zenata",domain
   ].join("\n")
  };
 }
@@ -109,18 +125,21 @@ function replyLead(data){
 }
 function followup(company,security){
  return {
-  subject:"Suivi de notre proposition Auréa — "+(security?"résidences à Zenata":"gestion de logements à Zenata"),
+  subject:"Suivi Auréa | "+(security?"Entretien de votre résidence à Zenata":"Ménages Airbnb avec contrôle photo à Zenata"),
   body:[
    "Bonjour à l’équipe "+company+",","",
    "Je me permets de revenir vers vous à la suite de mon précédent message au sujet d’une éventuelle collaboration à Zenata.",
    "",
    security
-    ?"Auréa souhaite échanger avec les gestionnaires de copropriétés sur l’entretien des parties communes et, sous réserve des autorisations requises, les besoins de gardiennage et de contrôle des accès."
-    :"Auréa pourrait compléter votre organisation lors des rotations Airbnb/Booking : ménage entre séjours, préparation du linge, consommables et contrôle qualité avec photos.",
+    ?"Nous pourrions étudier votre organisation actuelle pour l’entretien des parties communes : fréquences, gestion des remplacements et contrôle des interventions. Tout besoin de gardiennage fait l’objet d’une analyse distincte, sous réserve des autorisations réglementaires applicables."
+    :"Je vous avais proposé de compléter votre organisation sur les rotations Airbnb / Booking : ménage, linge hôtelier, réassort et contrôle qualité avec photos après ménage.",
    "",
-   "Je ne sais pas si le sujet est d’actualité pour vous. Si oui, un échange de 15 minutes nous permettrait de comprendre votre fonctionnement et de déterminer s’il existe un intérêt concret des deux côtés.",
+   security
+    ?"Pour nous présenter un bâtiment et les horaires souhaités, vous pouvez utiliser ce formulaire : "+domain+"devis/."
+    :"Une démonstration illustrée de nos outils et de la fiche appartement est visible ici : "+hostsDemo,
    "",
-   "Dans le cas contraire, n’hésitez pas à me l’indiquer ; je n’insisterai pas.",
+   "Si ce sujet est d’actualité, un échange de 15 minutes nous permettrait de voir si un essai sur un premier site a du sens.",
+   "Si ce n’est pas votre priorité, il suffit de me le préciser et je ne vous relancerai pas davantage.",
    closing
   ].join("\n")
  };
@@ -169,6 +188,8 @@ function meeting(company,security){
    "• les prestations aujourd’hui réalisées en interne ou sous-traitées ;",
    "• les difficultés opérationnelles à résoudre et les critères de choix d’un prestataire ;",
    "• les prochaines étapes pour évaluer une éventuelle collaboration.",
+   "",
+   security?"Pour le volet entretien et résidence, une visite technique pourra être proposée après ce premier échange.":"Vous pourrez parcourir notre présentation illustrée avant l’échange : "+hostsDemo,
    "",
    "Pouvez-vous me communiquer deux créneaux qui vous conviendraient ? Nous confirmerons ensemble l’horaire et le format.",
    closing
