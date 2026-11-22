@@ -13,7 +13,9 @@ const failure=(e)=>{
  return response({error:"Opération indisponible. Vérifiez la base et ses migrations."},503);
 };
 async function actorFor(req,db){
- if(isAuthorized(req))return {role:"admin",companyId:null};
+ const space=req.headers.get("x-aurea-space");
+ if(space==="operations" && !isAuthorized(req))return null;
+ if(space==="operations" || (space!=="hosts" && isAuthorized(req)))return {role:"admin",companyId:null};
  const id=hostId(req);
  if(!id)return null;
  const rows=await db.sql`select id,name from aurea_ops_companies where id=${id}::uuid and active=true limit 1`;
