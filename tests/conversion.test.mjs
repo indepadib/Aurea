@@ -4,6 +4,11 @@ import {readFile} from "node:fs/promises";
 import {mapFormSubmission} from "../lib/aurea-form.mjs";
 import {funnelCounts,publicFunnelLink} from "../admin/funnel-ui.js";
 import {issueCookie,isAuthorized} from "../lib/aurea-auth.mjs";
+globalThis.Netlify={env:{get:key=>({
+ AUREA_ADMIN_PASSWORD:"local-test-very-long-admin-password",
+ AUREA_SESSION_SECRET:"local-test-independent-32-char-session-secret"
+})[key]}};
+
 
 test("Auréa Hosts qualified lead records campaign, contact preference and optional tasks",()=>{
  const entry=mapFormSubmission({
