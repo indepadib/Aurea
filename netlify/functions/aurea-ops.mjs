@@ -108,7 +108,7 @@ export default async function handler(req){
    return rows.length?response({property:rows[0]}):response({error:"Logement introuvable"},404);
   }
   if(action==="request_job"){
-   if(!identifier(body.propertyId)||!validTurnover(body.start,body.end,body.checkout,body.checkin)return response({error:"Choisissez un logement et un créneau futur de 30 minutes à 12 heures."},400);
+   if(!identifier(body.propertyId)||!validTurnover(body.start,body.end,body.checkout,body.checkin))return response({error:"Choisissez un logement et un créneau futur de 30 minutes à 12 heures."},400);
    const prop=admin?await db.sql`select id,company_id from aurea_ops_properties where id=${body.propertyId}::uuid and active=true`:
     await db.sql`select id,company_id from aurea_ops_properties where id=${body.propertyId}::uuid and company_id=${actor.companyId}::uuid and active=true`;
    if(!prop.length)return response({error:"Logement non autorisé"},404);
