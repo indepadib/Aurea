@@ -50,9 +50,15 @@ export default async function handler(req){
     const properties=admin?await db.sql`select p.*,c.name as company_name from aurea_ops_properties p join aurea_ops_companies c on c.id=p.company_id order by p.name limit 600`:
      await db.sql`select * from aurea_ops_properties where company_id=${actor.companyId}::uuid order by name limit 600`;
     const teams=admin?await db.sql`select id,name,active from aurea_ops_teams order by name limit 120`:[];
+    const agents=admin?await db.sql`select a.id,a.full_name,a.email,a.team_id,a.active,a.created_at,t.name as team_name from aurea_ops_agents a join aurea_ops_teams t on t.id=a.team_id order by a.created_at desc limit 300`:[];
+    const incidents=admin?await db.sql`select e.job_id,e.created_at,e.detail,p.name as property_name,c.name as company_name
+      from aurea_ops_job_events e join aurea_ops_jobs j on j.id=e.job_id
+      join aurea_ops_properties p on p.id=j.property_id join aurea_ops_companies c on c.id=j.company_id
+      where e.event='incident_reported' and e.created_at>=now()-interval '7 days'
+      order by e.created_at desc limit 60`:[];
     const jobs=admin?await db.sql`select j.*,p.name as property_name,p.address as property_address,p.latitude,p.longitude,c.name as company_name,t.name as team_name from aurea_ops_jobs j join aurea_ops_properties p on p.id=j.property_id join aurea_ops_companies c on c.id=j.company_id left join aurea_ops_teams t on t.id=j.team_id where j.start_at>=now()-interval '30 days' and j.start_at<=now()+interval '180 days' order by j.start_at limit 1500`:
      await db.sql`select j.*,p.name as property_name,p.address as property_address,p.latitude,p.longitude from aurea_ops_jobs j join aurea_ops_properties p on p.id=j.property_id where j.company_id=${actor.companyId}::uuid and j.start_at>=now()-interval '30 days' and j.start_at<=now()+interval '180 days' order by j.start_at limit 1000`;
-    return response({companies,properties,teams,jobs,role:actor.role});
+    return response({companies,properties,teams,agents,incidents,jobs,role:actor.role});
    }
    if(resource==="history"){
     const id=url.searchParams.get("job");
@@ -89,6 +95,34 @@ export default async function handler(req){
    if(name.length<2)return response({error:"Nom d'équipe obligatoire"},400);
    const rows=await db.sql`insert into aurea_ops_teams(name) values (${name}) returning id,name,active`;
    return response({team:rows[0]},201);
+  }
+  if(action==="create_agent"){
+   if(!admin)return response({error:"Accès réservé à Auréa"},403);
+   const name=clean(body.full_name,140),email=clean(body.email,250).toLowerCase(),teamId=body.teamId;
+   if(name.length<2||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!identifier(teamId))
+     return response({error:"Nom, e-mail et équipe obligatoires"},400);
+   const team=await db.sql`select id from aurea_ops_teams where id=${teamId}::uuid and active=true limit 1`;
+   if(!team.length)return response({error:"Équipe inactive ou introuvable"},404);
+   const password=newHostPassword(),hash=hashPassword(password);
+   const rows=await db.sql`insert into aurea_ops_agents(team_id,full_name,email,password_hash)
+    values(${teamId}::uuid,${name},${email},${hash}) returning id,team_id,full_name,email,active`;
+   return response({agent:rows[0],temporaryPassword:password,notice:"Transmettez ce mot de passe de manière privée. Il ne sera plus affiché."},201);
+  }
+  if(action==="reset_agent_access"){
+   if(!admin||!identifier(body.agentId))return response({error:"Accès interdit"},403);
+   const password=newHostPassword(),hash=hashPassword(password);
+   const rows=await db.sql`update aurea_ops_agents set password_hash=${hash},
+    session_rev=session_rev+1,updated_at=now() where id=${body.agentId}::uuid and active=true
+    returning id,full_name,email`;
+   return rows.length?response({agent:rows[0],temporaryPassword:password}):response({error:"Intervenant introuvable ou inactif"},404);
+  }
+  if(action==="set_agent_active"){
+   if(!admin||!identifier(body.agentId)||typeof body.active!=="boolean")
+     return response({error:"Paramètres invalides"},400);
+   const rows=await db.sql`update aurea_ops_agents set active=${body.active},
+    session_rev=session_rev+1,updated_at=now()
+    where id=${body.agentId}::uuid returning id,active`;
+   return rows.length?response({agent:rows[0]}):response({error:"Intervenant introuvable"},404);
   }
   if(action==="create_property"||action==="update_property"){
    const data=propData(body);

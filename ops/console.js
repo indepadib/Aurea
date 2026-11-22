@@ -1,7 +1,7 @@
 const app=document.getElementById("app");
 const mode=document.body.dataset.mode;
 const isOps=mode==="operations";
-const state={session:null,data:{companies:[],properties:[],teams:[],jobs:[]},tab:"planning",weekOffset:0,filter:"all",search:"",company:"all",busy:false,modal:null};
+const state={session:null,data:{companies:[],properties:[],teams:[],agents:[],jobs:[]},tab:"planning",weekOffset:0,filter:"all",search:"",company:"all",busy:false,modal:null};
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const statusLabels={requested:"Demandé",confirmed:"Confirmé",assigned:"Équipe affectée",in_progress:"En cours",qa:"Contrôle qualité",completed:"Terminé",cancelled:"Annulé"};
 const fmt=(value,opts={})=>value?new Intl.DateTimeFormat("fr-FR",{timeZone:"Africa/Casablanca",...opts}).format(new Date(value)):"—";
@@ -52,10 +52,14 @@ function render(){
  const jobs=state.data.jobs,pending=jobs.filter(j=>j.status==="requested").length,active=jobs.filter(j=>["assigned","in_progress","qa"].includes(j.status)).length;
  const today=jobs.filter(j=>localDay(j.start_at)===localDay(new Date())&&j.status!=="cancelled").length;
  const done=jobs.filter(j=>j.status==="completed").length;
+ const incidents=isOps?(state.data.incidents||[]):[];
+ const important=incidents.filter(e=>["high","critical"].includes(e.detail?.severity));
+ const incidentNotice=incidents.length?`<div class="alertline" style="margin-top:20px"><b>${incidents.length} incident(s) signalé(s) sur les 7 derniers jours</b>${important.length?" · "+important.length+" important(s)/critique(s)":""}<div class="flex" style="margin-top:10px">${incidents.slice(0,3).map(e=>'<button class="btn secondary tiny" data-action="job" data-id="'+esc(e.job_id)+'">'+esc(e.property_name)+' · '+esc(e.detail?.severity||"incident")+'</button>').join("")}</div></div>`:"";
+
  app.innerHTML=`<div class="app"><header class="top"><a class="logo" href="../"><img src="../assets/logo-symbol-clean.png" alt=""> AURÉA <span class="eyebrow" style="margin-left:4px">${isOps?"OPERATIONS":"HOSTS"}</span></a><div class="top-right"><small>${esc(state.session?.name||"Espace privé")}</small><button class="btn secondary tiny" data-action="logout">Déconnexion</button></div></header><div class="container">
  <section class="hero"><div><span class="eyebrow">${isOps?"Pilotage opérationnel":"Votre conciergerie en un seul endroit"}</span><h1>${isOps?"Chaque intervention, sous contrôle.":"Votre planning. Notre engagement."}</h1><p>${isOps?"Anticipez les rotations, affectez les équipes et sécurisez la qualité de chaque prestation.":"Réservez vos ménages et suivez leur préparation, leur exécution et leurs contrôles en toute transparence."}</p></div><div class="flex">${buttons()}</div></section>
- <section class="metrics"><div class="metric"><label>Demandes à confirmer</label><strong>${pending}</strong><span>Action de coordination</span></div><div class="metric"><label>Rotations aujourd’hui</label><strong>${today}</strong><span>Fuseau Casablanca</span></div><div class="metric"><label>Interventions actives</label><strong>${active}</strong><span>En affectation ou exécution</span></div><div class="metric"><label>Interventions terminées</label><strong>${done}</strong><span>Sur la période chargée</span></div></section>
- <div class="toolbar"><div class="tabs"><button class="tab ${state.tab==="planning"?"active":""}" data-action="tab" data-tab="planning">Planning</button><button class="tab ${state.tab==="properties"?"active":""}" data-action="tab" data-tab="properties">Logements</button>${isOps?'<button class="tab '+(state.tab==="companies"?"active":"")+'" data-action="tab" data-tab="companies">Conciergeries</button><button class="tab '+(state.tab==="teams"?"active":"")+'" data-action="tab" data-tab="teams">Équipes</button>':""}</div><div class="toolbar-side"><input class="search" type="search" id="search" placeholder="Rechercher…" value="${esc(state.search)}" aria-label="Rechercher"><select id="filter" class="filter" aria-label="Filtrer le statut"><option value="all">Tous les statuts</option>${Object.entries(statusLabels).map(([k,v])=>'<option value="'+k+'" '+(state.filter===k?"selected":"")+'>'+v+'</option>').join("")}</select>
+ <section class="metrics"><div class="metric"><label>Demandes à confirmer</label><strong>${pending}</strong><span>Action de coordination</span></div><div class="metric"><label>Rotations aujourd’hui</label><strong>${today}</strong><span>Fuseau Casablanca</span></div><div class="metric"><label>Interventions actives</label><strong>${active}</strong><span>En affectation ou exécution</span></div><div class="metric"><label>Interventions terminées</label><strong>${done}</strong><span>Sur la période chargée</span></div></section>${incidentNotice}
+ <div class="toolbar"><div class="tabs"><button class="tab ${state.tab==="planning"?"active":""}" data-action="tab" data-tab="planning">Planning</button><button class="tab ${state.tab==="properties"?"active":""}" data-action="tab" data-tab="properties">Logements</button>${isOps?'<button class="tab '+(state.tab==="companies"?"active":"")+'" data-action="tab" data-tab="companies">Conciergeries</button><button class="tab '+(state.tab==="teams"?"active":"")+'" data-action="tab" data-tab="teams">Équipes</button><button class="tab '+(state.tab==="agents"?"active":"")+'" data-action="tab" data-tab="agents">Intervenants</button>':""}</div><div class="toolbar-side"><input class="search" type="search" id="search" placeholder="Rechercher…" value="${esc(state.search)}" aria-label="Rechercher"><select id="filter" class="filter" aria-label="Filtrer le statut"><option value="all">Tous les statuts</option>${Object.entries(statusLabels).map(([k,v])=>'<option value="'+k+'" '+(state.filter===k?"selected":"")+'>'+v+'</option>').join("")}</select>
  ${isOps?'<select id="company-filter" class="filter" aria-label="Filtrer conciergerie"><option value="all">Tous les clients</option>'+state.data.companies.map(c=>'<option value="'+esc(c.id)+'" '+(state.company===c.id?"selected":"")+'>'+esc(c.name)+'</option>').join("")+'</select>':""}</div></div>
  <div id="main-content">${content()}</div>
  <footer class="foot">Auréa Services · Les demandes sont confirmées après validation de disponibilité · Horaires Afrique/Casablanca</footer></div></div>`;
@@ -64,6 +68,7 @@ function content(){
  if(state.tab==="properties")return propertiesView();
  if(state.tab==="companies"&&isOps)return companiesView();
  if(state.tab==="teams"&&isOps)return teamsView();
+ if(state.tab==="agents"&&isOps)return agentsView();
  return planningView();
 }
 function planningView(){
@@ -82,6 +87,10 @@ function companiesView(){
 function teamsView(){
  return `<section class="panel"><div class="panel-head"><div><h2>Équipes opérationnelles</h2><p>Une même équipe ne peut pas avoir deux affectations qui se chevauchent.</p></div><button class="btn" data-action="create-team">+ Ajouter une équipe</button></div><div class="cards">${state.data.teams.length?state.data.teams.map(t=>`<article class="entity"><div><h3>${esc(t.name)}</h3><p>${t.active?"Disponible pour affectation":"Équipe inactive"}</p></div><div class="flex"><span class="status">${state.data.jobs.filter(j=>j.team_id===t.id&&!["completed","cancelled"].includes(j.status)).length} intervention(s) actives</span></div></article>`).join(""):'<div class="empty"><h3>Créez vos équipes</h3><p>L’affectation intervient après confirmation d’une demande.</p></div>'}</div></section>`;
 }
+function agentsView(){
+ const agents=state.data.agents||[];
+ return `<section class="panel"><div class="panel-head"><div><h2>Intervenants terrain</h2><p>Accès individuels, séparés du compte administrateur et des conciergeries. Chaque personne ne voit que les missions de son équipe.</p></div><div class="flex"><a class="btn secondary tiny" href="../field/" target="_blank" rel="noopener noreferrer">Ouvrir Auréa Field ↗</a><button class="btn" data-action="create-agent">+ Ajouter un intervenant</button></div></div><div class="cards">${agents.length?agents.map(a=>`<article class="entity"><div><h3>${esc(a.full_name)}</h3><p>${esc(a.email)}</p><small>${esc(a.team_name)}</small></div><div class="flex"><span class="status ${a.active?"completed":"cancelled"}">${a.active?"Actif":"Suspendu"}</span></div><div class="actions flex"><button class="btn secondary tiny" data-action="reset-agent" data-id="${esc(a.id)}" ${a.active?"":"disabled"}>Réinitialiser l’accès</button><button class="btn ${a.active?"danger":"secondary"} tiny" data-action="toggle-agent" data-id="${esc(a.id)}">${a.active?"Suspendre":"Réactiver"}</button></div></article>`).join(""):'<div class="empty"><h3>Aucun intervenant enregistré</h3><p>Créez un compte individuel et affectez-le à une équipe active pour démarrer la mission terrain.</p></div>'}</div></section>`;
+}
 function field(label,name,type="text",value="",extra=""){
  return '<div class="field"><label for="'+esc(name)+'">'+esc(label)+'</label>'+ (type==="textarea"?'<textarea id="'+esc(name)+'" name="'+esc(name)+'" '+extra+'>'+esc(value)+'</textarea>':'<input id="'+esc(name)+'" name="'+esc(name)+'" type="'+esc(type)+'" value="'+esc(value)+'" '+extra+'>')+'</div>';
 }
@@ -94,6 +103,7 @@ function frame(title,subtitle,inside,wide=false){
 function modal(kind,entity={}){
  let inside="";
  if(kind==="company")inside=`<form data-form="company"><div class="form-grid">${field("Nom de la conciergerie *","name","text","","required minlength=2")}${field("E-mail professionnel *","email","email","","required")}${field("Contact","contact_name")}${field("Téléphone professionnel","phone","tel")}</div><div class="dialog-footer"><span class="hint">Le mot de passe sera généré et affiché une seule fois.</span><button class="btn">Créer les accès</button></div></form>`;
+ if(kind==="agent")inside=`<form data-form="agent"><div class="form-grid">${field("Nom complet *","full_name","text","","required minlength=2")}${field("E-mail personnel de connexion *","email","email","","required")}<div class="full"><div class="field"><label for="teamId">Équipe *</label><select id="teamId" name="teamId" required><option value="">Sélectionner une équipe…</option>${state.data.teams.filter(t=>t.active).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join("")}</select></div></div></div><div class="notice">Un mot de passe temporaire personnel sera généré. Il doit être transmis à la personne via un canal privé.</div><div class="dialog-footer"><button class="btn">Créer son accès terrain</button></div></form>`;
  if(kind==="team")inside=`<form data-form="team"><div class="form-grid">${field("Nom de l’équipe *","name","text","","required minlength=2")}</div><div class="dialog-footer"><button class="btn">Ajouter l’équipe</button></div></form>`;
  if(kind==="property"){
   const p=entity,org=isOps?options("companyId",state.data.companies.map(c=>({id:c.id,name:c.name})),p.company_id):"";
@@ -105,9 +115,9 @@ function modal(kind,entity={}){
   inside=`<form data-form="job" data-id="${esc(entity.id||"")}"><div class="form-grid"><div class="full">${propertyOptions}</div>${field("Début du ménage *","start","datetime-local","","required")}${field("Fin estimée *","end","datetime-local","","required")}${field("Départ des voyageurs (facultatif)","checkout","datetime-local")}${field("Prochaine arrivée (facultatif)","checkin","datetime-local")}<div class="full">${field("Instructions particulières","notes","textarea",entity.notes||"")}</div></div><div class="notice">${editing?"Les modifications sont possibles uniquement avant la confirmation par Auréa.":"Cette demande est envoyée à Auréa. Elle ne sera confirmée qu’après vérification de la disponibilité."} Heures locales de Casablanca.</div><div class="dialog-footer"><button class="btn">${editing?"Enregistrer le nouveau créneau":"Envoyer la demande de ménage"}</button></div></form>`;
  }
  if(kind==="secret"){
-  inside=`<div class="notice">Le compte est créé. Transmettez l’adresse e-mail et le mot de passe au partenaire par un canal sécurisé.</div><div class="secret"><small>Accès Auréa Hosts</small><p>${esc(entity.email||"")}</p><code id="password-once">${esc(entity.password)}</code><button class="btn secondary tiny" data-action="copy-password">Copier le mot de passe</button></div><div class="dialog-footer"><span class="hint">Ce secret ne sera pas récupérable après fermeture.</span><button class="btn" data-action="close">J’ai sauvegardé les accès</button></div>`;
+  inside=`<div class="notice">Le compte est créé. Transmettez l’adresse e-mail et le mot de passe au partenaire par un canal sécurisé.</div><div class="secret"><small>${entity.role==="field"?"Accès Auréa Field":"Accès Auréa Hosts"}</small><p>${esc(entity.email||"")}</p><code id="password-once">${esc(entity.password)}</code><button class="btn secondary tiny" data-action="copy-password">Copier le mot de passe</button></div><div class="dialog-footer"><span class="hint">Ce secret ne sera pas récupérable après fermeture.</span><button class="btn" data-action="close">J’ai sauvegardé les accès</button></div>`;
  }
- const titles={company:"Créer une conciergerie",team:"Nouvelle équipe",property:entity.id?"Modifier un logement":"Ajouter un logement",job:entity.id?"Modifier une demande":"Demander une intervention",secret:"Accès partenaire créé"};
+ const titles={company:"Créer une conciergerie",agent:"Nouvel intervenant",team:"Nouvelle équipe",property:entity.id?"Modifier un logement":"Ajouter un logement",job:entity.id?"Modifier une demande":"Demander une intervention",secret:"Accès partenaire créé"};
  document.body.insertAdjacentHTML("beforeend",frame(titles[kind],"Une organisation fiable, des informations claires.",inside,kind==="property"));
  const overlay=document.getElementById("overlay");overlay.addEventListener("click",e=>{if(e.target===overlay)overlay.remove()});
  if(kind==="job"){const d=new Date();d.setHours(d.getHours()+24,0,0,0);const end=new Date(d.getTime()+2*3600000);const val=v=>v.getFullYear()+"-"+two(v.getMonth()+1)+"-"+two(v.getDate())+"T"+two(v.getHours())+":"+two(v.getMinutes());for(const [name,value] of [["start",entity.start_at||d],["end",entity.end_at||end],["checkout",entity.checkout_at],["checkin",entity.next_checkin_at]]){if(value)overlay.querySelector(`[name="${name}"]`).value=val(new Date(value));}}
@@ -126,7 +136,7 @@ async function jobDetails(id){
  const controls=next.length?`<div class="section"><h3>Faire avancer l’intervention</h3>${next.includes("confirmed")?teamSelect:""}<div class="flex">${next.map(n=>'<button class="btn '+(n==="cancelled"?"danger":"secondary")+' tiny" data-action="transition" data-id="'+esc(job.id)+'" data-status="'+esc(n)+'">'+esc(n==="cancelled"?"Annuler":statusLabels[n])+'</button>').join("")}</div><p class="hint">Les étapes sont historisées. Une équipe ne peut pas être affectée à deux interventions qui se chevauchent.</p></div>`:"";
  const reassign=isOps&&["confirmed","assigned"].includes(job.status)?`<div class="section"><h3>Changer d’équipe</h3>${teamSelect.replace('id="team-for-job"','id="team-reassign"')}<button class="btn secondary tiny" data-action="reassign" data-id="${esc(job.id)}">Réaffecter</button></div>`:"";
  const evidence=history.photos?.length?`<div class="photo-list">${history.photos.map(p=>`<a href="/api/aurea-ops-photo?job=${encodeURIComponent(id)}&photo=${encodeURIComponent(p.id)}" target="_blank" rel="noopener noreferrer"><img loading="lazy" alt="Photo de contrôle" src="/api/aurea-ops-photo?job=${encodeURIComponent(id)}&photo=${encodeURIComponent(p.id)}"><small>${esc(p.caption||"Preuve qualité")}</small></a>`).join("")}</div>`:'<p class="hint">Aucune photo de contrôle enregistrée.</p>';
- const logs=history.events?.length?history.events.map(e=>`<div class="event"><b>${esc(e.event==="incident_reported"?"Incident signalé":statusLabels[e.event]||e.event.replaceAll("_"," "))}</b><small>${fmt(e.created_at,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})} · ${esc(e.actor==="admin"?"Équipe Auréa":"Conciergerie")}</small>${e.detail?.note?`<p class="subtitle">${esc(e.detail?.severity||"")} · ${esc(e.detail.note)}</p>`:""}</div>`).join(""):'<p class="hint">Aucun événement enregistré.</p>';
+ const logs=history.events?.length?history.events.map(e=>`<div class="event"><b>${esc(e.event==="incident_reported"?"Incident signalé":statusLabels[e.event]||e.event.replaceAll("_"," "))}</b><small>${fmt(e.created_at,{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})} · ${esc(e.actor==="admin"?"Équipe Auréa":e.actor==="field"?"Intervenant terrain":"Conciergerie")}</small>${e.detail?.note?`<p class="subtitle">${esc(e.detail?.severity||"")} · ${esc(e.detail.note)}</p>`:""}</div>`).join(""):'<p class="hint">Aucun événement enregistré.</p>';
  const mapQuery=encodeURIComponent(job.latitude!==null&&job.longitude!==null?job.latitude+","+job.longitude:job.property_address);
  const markup=`<div class="flex"><span class="status ${esc(job.status)}">${esc(statusLabels[job.status])}</span><span class="hint">${fmt(job.start_at,{weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})} — ${fmt(job.end_at,{hour:"2-digit",minute:"2-digit"})}</span></div><div class="section"><b>${esc(job.property_name)}</b><p class="subtitle">${esc(job.property_address)} · ${isOps?esc(job.company_name)+" · ":""}${esc(job.team_name||"Équipe non encore affectée")}</p><a target="_blank" rel="noopener noreferrer" href="https://www.google.com/maps/search/?api=1&query=${mapQuery}" class="btn secondary tiny">Localiser le logement ↗</a><p>${esc(job.notes||"Aucune consigne complémentaire")}</p></div>${reschedule}${controls}${reassign}${quality}<section class="section"><h3>Signaler une anomalie ou un incident</h3><p class="hint">Les signalements sont enregistrés et visibles dans la chronologie par Auréa et la conciergerie.</p><form data-form="incident" data-id="${esc(job.id)}"><div class="field"><label for="severity">Gravité</label><select id="severity" name="severity" required><option value="low">Mineure</option><option value="medium">Modérée</option><option value="high">Importante</option><option value="critical">Critique</option></select></div><div class="field"><label for="incident-note">Description de l’incident</label><textarea id="incident-note" name="note" minlength="10" maxlength="1400" required placeholder="Ex. Consommable manquant, dégât, retard, accès indisponible…"></textarea></div><button class="btn secondary tiny">Enregistrer l’incident</button></form></section><section class="section"><h3>Preuves photographiques</h3>${evidence}</section><section class="section"><h3>Historique de l’intervention</h3><div class="timeline">${logs}</div></section>`;
  document.body.insertAdjacentHTML("beforeend",frame("Dossier intervention","Une chronologie vérifiable, de la demande à la validation.",markup,true));
@@ -144,9 +154,21 @@ async function action(name,el){
  if(name==="create-property")return modal("property");
  if(name==="create-company")return modal("company");
  if(name==="create-team")return modal("team");
+ if(name==="create-agent")return modal("agent");
  if(name==="property"){const p=state.data.properties.find(x=>x.id===el.dataset.id);if(p)return modal("property",p);}
  if(name==="job")return jobDetails(el.dataset.id);
  if(name==="copy-password"){const p=document.getElementById("password-once")?.textContent;if(p){await navigator.clipboard.writeText(p);toast("Mot de passe copié")};return;}
+ if(name==="reset-agent"){
+  if(!confirm("Réinitialiser les accès de cette personne ? Les sessions existantes seront invalidées."))return;
+  const result=await post("reset_agent_access",{agentId:el.dataset.id});
+  modal("secret",{email:result.agent.email,password:result.temporaryPassword,role:"field"});return;
+ }
+ if(name==="toggle-agent"){
+  const agent=(state.data.agents||[]).find(a=>a.id===el.dataset.id);
+  if(!agent||!confirm((agent.active?"Suspendre":"Réactiver")+" l’accès de cet intervenant ?"))return;
+  await post("set_agent_active",{agentId:agent.id,active:!agent.active});
+  await refresh();toast("Accès mis à jour");return;
+ }
  if(name==="reset-company"){
   if(!confirm("Réinitialiser le mot de passe de cette conciergerie ? L’ancien mot de passe ne fonctionnera plus."))return;
   const x=await post("reset_company_access",{companyId:el.dataset.id});
@@ -184,6 +206,11 @@ async function submit(form){
   document.getElementById("overlay")?.remove();await refresh();modal("secret",{email:data.company.email,password:data.temporaryPassword});return;
  }
  if(type==="team"){await post("create_team",f);}
+ if(type==="agent"){
+  const x=await post("create_agent",f);
+  document.getElementById("overlay")?.remove();await refresh();
+  modal("secret",{email:x.agent.email,password:x.temporaryPassword,role:"field"});return;
+ }
  if(type==="property"){
   const old=form.dataset.id;
   await post(old?"update_property":"create_property",{...f,...(old?{propertyId:old}:{})});
