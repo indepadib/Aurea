@@ -28,3 +28,9 @@ jobs:
       - run: node --check admin/sales-ui.js
       - run: node --check admin/outreach-view.js
       - run: node --check netlify/functions/aurea-activities.mjs
+      - run: node --check devis/wizard.js
+      - run: node --check admin/funnel-ui.js
+      - run: node --check netlify/functions/aurea-funnel.mjs
+      - run: node --check lib/aurea-form.mjs
+      - run: node --check lib/aurea-auth.mjs
+      - run: node --check admin/sales-ui.js

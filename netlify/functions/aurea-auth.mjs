@@ -9,7 +9,7 @@ export default async function handler(req){
  if(body.action==="logout") return response({authenticated:false},200,{"Set-Cookie":clearCookie()});
  if(body.action!=="login") return response({error:"Action invalide"},400);
  if(!validPassword(body.password)) return response({error:"Identifiants incorrects"},401);
- return response({authenticated:true},200,{"Set-Cookie":issueCookie()});
+ return response({authenticated:true},200,{"Set-Cookie":issueCookie(body.remember===true)});
 }
 export const config={
  path:"/api/aurea-auth",

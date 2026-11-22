@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#092C42">
+<meta name="description" content="Votre devis Auréa à Zenata : préparation Airbnb, ménage à domicile et entretien de résidence. Décrivez votre besoin en quelques étapes.">
+<title>Votre devis sur mesure | Auréa Clean & Security</title>
+<link rel="icon" href="../assets/logo-symbol-clean.png">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header class="nav">
+ <a class="logo" href="/" aria-label="Auréa, retour à l'accueil"><img src="../assets/logo-symbol-clean.png" alt=""><span><strong>AURÉA</strong><small>CLEAN & SECURITY</small></span></a>
+ <a class="nav-link" href="/">← Retour au site</a>
+</header>
+<main class="layout">
+ <aside class="story">
+  <div class="story-overline"><span class="dot"></span> Services aux logements & résidences · Zenata</div>
+  <h1>Votre espace mérite<br><em>une attention sur mesure.</em></h1>
+  <p>Quelques informations, et nous pourrons étudier une organisation adaptée à votre logement ou votre résidence.</p>
+  <div class="story-features">
+   <div><span>01</span><p><strong>Le bon service</strong><small>Une demande différente pour chaque besoin.</small></p></div>
+   <div><span>02</span><p><strong>Un interlocuteur</strong><small>Votre besoin est transmis à l'équipe Auréa.</small></p></div>
+   <div><span>03</span><p><strong>Une proposition adaptée</strong><small>Un devis après vérification du périmètre et des disponibilités.</small></p></div>
+  </div>
+  <div class="story-note">Aucune réservation ni paiement à ce stade. Les prestations de gardiennage sont soumises aux autorisations réglementaires.</div>
+ </aside>
+ <section class="wizard-container" aria-labelledby="wizardTitle">
+  <div class="wizard-top"><div><span class="section-kicker">AURÉA · DEMANDE DE DEVIS</span><h2 id="wizardTitle">Parlons de votre besoin.</h2></div><span id="stepIndicator">Étape 1 sur 3</span></div>
+  <div class="progress-track"><div id="progressFill"></div></div>
+  <div id="wizardError" role="alert" aria-live="polite" hidden></div>
+  <form id="quoteWizard" name="demande-devis" method="POST" data-netlify="true" netlify-honeypot="bot-field" novalidate>
+   <input type="hidden" name="form-name" value="demande-devis">
+   <input type="hidden" name="request_id" value="">
+   <input type="hidden" name="profil" value="">
+   <input type="hidden" name="service" value="">
+   <input type="hidden" name="parcours" value="">
+   <input type="hidden" name="source_campagne" value="">
+   <input type="hidden" name="options" value="">
+   <div class="honeypot" aria-hidden="true"><label>Ne pas remplir ce champ : <input name="bot-field" tabindex="-1" autocomplete="off"></label></div>
+   <section class="step active" id="step1" data-step="1" aria-labelledby="chooseTitle">
+    <span class="step-tag">01 / VOTRE PROJET</span>
+    <h3 id="chooseTitle">Quel service recherchez-vous ?</h3>
+    <p class="step-intro">Choisissez la solution qui correspond le mieux à votre besoin.</p>
+    <div class="choices" role="group" aria-label="Sélection du service">
+     <button type="button" class="choice" data-type="hosts" aria-pressed="false"><span class="choice-icon">⌂</span><span><strong>Auréa Hosts</strong><small>Airbnb, Booking, turnovers, linge hôtelier et préparation des voyageurs.</small></span><span class="choice-arrow">↗</span></button>
+     <button type="button" class="choice" data-type="home" aria-pressed="false"><span class="choice-icon">✧</span><span><strong>Auréa Home</strong><small>Ménage ponctuel ou régulier pour votre appartement ou maison.</small></span><span class="choice-arrow">↗</span></button>
+     <button type="button" class="choice" data-type="syndic" aria-pressed="false"><span class="choice-icon">▧</span><span><strong>Auréa Résidences</strong><small>Entretien des parties communes et étude de besoins en gardiennage.</small></span><span class="choice-arrow">↗</span></button>
+    </div>
+    <div class="selection-hint">Sélectionnez une option pour continuer.</div>
+   </section>
+   <section class="step" id="step2" data-step="2" aria-labelledby="detailsTitle" hidden>
+    <span class="step-tag">02 / VOTRE BESOIN</span>
+    <h3 id="detailsTitle">Quelques détails utiles.</h3>
+    <p class="step-intro" id="detailsDescription">Ces éléments nous aident à préparer une proposition pertinente.</p>
+    <div class="field"><label for="ville">Ville et résidence / quartier <span>*</span></label><input id="ville" name="ville" type="text" required autocomplete="address-level2" placeholder="Ex. Résidence à Zenata"></div>
+    <div class="fieldrow">
+     <div class="field"><label for="volume" id="volumeLabel">Type et nombre de logements</label><input name="volume" id="volume" type="text" placeholder="Ex. 2 appartements T2"></div>
+     <div class="field"><label for="frequence" id="frequencyLabel">Fréquence souhaitée</label><select id="frequence" name="frequence"></select></div>
+    </div>
+    <div class="field"><label id="optionLabel">Prestations qui vous intéressent</label><div class="option-grid" id="optionGrid"></div></div>
+    <div class="fieldrow">
+     <div class="field"><label for="date_souhaitee">Date souhaitée (facultatif)</label><input id="date_souhaitee" type="date" name="date_souhaitee"></div>
+     <div class="field"><label for="preferedChannelPreview">Votre priorité</label><select id="preferedChannelPreview" aria-label="Priorité"><option value="Qualité de service">Qualité de service</option><option value="Réactivité">Réactivité / délais</option><option value="Récurrence">Suivi régulier</option><option value="Optimisation des coûts">Optimisation des coûts</option></select></div>
+    </div>
+    <div class="field"><label for="message">Précisions à nous transmettre (facultatif)</label><textarea id="message" name="message" rows="3" maxlength="1700" placeholder="Décrivez les contraintes, les horaires ou les équipements..."></textarea></div>
+    <p id="securityNote" class="regulatory-note" hidden>Le gardiennage ne peut être engagé qu'après vérification des autorisations applicables. Ce formulaire constitue une demande d'étude, pas une réservation.</p>
+   </section>
+   <section class="step" id="step3" data-step="3" aria-labelledby="contactTitle" hidden>
+    <span class="step-tag">03 / VOS COORDONNÉES</span>
+    <h3 id="contactTitle">Comment pouvons-nous vous joindre ?</h3>
+    <p class="step-intro">Un membre de l'équipe vérifiera votre demande avant de vous proposer les prochaines étapes.</p>
+    <div class="field"><label for="nom">Votre nom / entreprise <span>*</span></label><input id="nom" name="nom" required maxlength="160" autocomplete="name" placeholder="Nom complet ou raison sociale"></div>
+    <div class="fieldrow">
+     <div class="field"><label for="telephone">Téléphone <span>*</span></label><input id="telephone" name="telephone" required inputmode="tel" type="tel" maxlength="35" autocomplete="tel" placeholder="+212 6..."></div>
+     <div class="field"><label for="email">Adresse email</label><input id="email" type="email" name="email" maxlength="190" autocomplete="email" placeholder="vous@exemple.com"></div>
+    </div>
+    <div class="field"><label for="preference_contact">Canal de contact préféré</label><select id="preference_contact" name="preference_contact"><option value="WhatsApp">WhatsApp</option><option value="Téléphone">Appel téléphonique</option><option value="Email">Email</option></select></div>
+    <div class="summary" id="requestSummary" aria-live="polite"></div>
+    <label class="consent"><input type="checkbox" name="consentement_contact" required><span>J'autorise Auréa à me recontacter au sujet de cette demande. Mes informations ne servent pas à une prospection commerciale non liée à mon projet. <span class="required">*</span></span></label>
+    <p class="privacy-note">Aucun paiement demandé. L’envoi ne confirme ni prix ni disponibilité.</p>
+   </section>
+   <section class="step success" id="stepSuccess" aria-live="polite" hidden>
+    <div class="success-symbol">✓</div><span class="step-tag">DEMANDE TRANSMISE</span><h3>Merci, votre demande est envoyée.</h3><p>Elle a été transmise à Auréa. Notre équipe vérifiera les informations et reviendra vers vous via le canal indiqué pour préciser les prochaines étapes.</p>
+    <div class="success-next"><strong>Prochaine étape</strong><span>Un échange de qualification, puis un devis si le périmètre et les disponibilités peuvent être confirmés.</span></div>
+    <a class="btn btn-primary" href="/">Retourner au site Auréa →</a>
+   </section>
+   <div class="wizard-footer" id="wizardFooter">
+    <button type="button" id="backButton" class="btn btn-outline" hidden>← Retour</button>
+    <div class="footer-spacer"></div>
+    <button type="button" id="nextButton" class="btn btn-primary" disabled>Continuer →</button>
+    <button type="submit" id="submitButton" class="btn btn-primary" hidden>Envoyer ma demande →</button>
+   </div>
+  </form>
+ </section>
+</main>
+<footer class="page-footer"><span>© 2026 Auréa Clean & Security</span><span>Zenata · Casablanca · Maroc</span><a href="/">Découvrir nos services</a></footer>
+<script type="module" src="./wizard.js"></script>
+</body>
+</html>

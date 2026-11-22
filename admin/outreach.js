@@ -235,6 +235,8 @@ export function contactLinks(data={},kind="prospect",mode="intro"){
  const links=createMailLinks(email,draft.subject,draft.body);
  return {...draft,email:isMail(email)?email:"",phone,...links,
   telephone:phone?"tel:"+phone:"",
+  whatsapp:(kind==="lead"&&phone&&["Demande entrante","Consentement obtenu"].includes(data.consent||""))
+   ?"https://wa.me/"+phone.replace(/\D/g,"")+"?text="+encodeURIComponent("Bonjour "+tidy(data.name,70)+", merci d’avoir contacté Auréa"+(data.service?" concernant "+tidy(data.service,80):"")+". Pour préparer une proposition adaptée, pourriez-vous nous préciser vos besoins et vos disponibilités pour un échange ? L’équipe Auréa."): "",
   website:/^https?:\/\/[^\s]+$/i.test(String(data.sourceUrl||""))?data.sourceUrl:"",
  };
 }

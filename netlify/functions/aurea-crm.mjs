@@ -4,7 +4,7 @@ import {isAuthorized,sameOrigin,response} from "../../lib/aurea-auth.mjs";
 const kinds=new Set(["prospect","lead","partner","content","task"]);
 const fields={
  prospect:["name","segment","zone","evidence","priority","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent","contactedAt","lastContactChannel","linkedLeadId"],
- lead:["name","segment","zone","service","status","source","nextAction","nextDate","owner","notes","email","phone","quote","revenue","variableCost","consent","originProspectId","securityCompliance","complianceEvidence","proposalScope","proposalFrequency","proposalConditions","proposalValidUntil","contactedAt","lastContactChannel"],
+ lead:["name","segment","zone","service","status","source","nextAction","nextDate","owner","notes","email","phone","quote","revenue","variableCost","consent","originProspectId","preferredContact","requestedDate","serviceOptions","sourceCampaign","funnel","securityCompliance","complianceEvidence","proposalScope","proposalFrequency","proposalConditions","proposalValidUntil","contactedAt","lastContactChannel"],
  partner:["name","segment","zone","status","source","sourceUrl","nextAction","nextDate","owner","notes","email","phone","consent","contactedAt","lastContactChannel"],
  content:["name","segment","channel","format","date","status","cta","copy","owner","notes"],
  task:["name","segment","status","priority","dueDate","owner","notes"]
