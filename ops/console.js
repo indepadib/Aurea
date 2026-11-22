@@ -11,7 +11,8 @@ const weekStart=()=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate
 const dates=()=>Array.from({length:7},(_,i)=>{const d=weekStart();d.setDate(d.getDate()+i);return d;});
 const toast=(msg,bad=false)=>{document.querySelector(".toast")?.remove();const div=document.createElement("div");div.className="toast"+(bad?" bad":"");div.textContent=msg;document.body.append(div);setTimeout(()=>div.remove(),4800);};
 async function api(url,options={}){
- const r=await fetch(url,{credentials:"same-origin",cache:"no-store",...options});
+ const customHeaders={...(options.headers||{}),"X-Aurea-Space":isOps?"operations":"hosts"};
+ const r=await fetch(url,{credentials:"same-origin",cache:"no-store",...options,headers:customHeaders});
  const obj=await r.json().catch(()=>({}));
  if(!r.ok)throw Error(obj.error||"Service indisponible");
  return obj;
