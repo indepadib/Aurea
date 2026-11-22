@@ -31,20 +31,21 @@ export function renderDossier(record,kind,activities=[]){
   ["Statut",d.status||"À qualifier"],["Segment",d.segment||"À définir"],["Origine",d.source||"À préciser"],
   ["Zone",d.zone||"À préciser"],["Email",links.email||"Non identifié"],["Téléphone",d.phone||"Non identifié"],
   ["Responsable",d.owner||"Non affecté"],["Prochaine action",d.nextAction||"À déterminer"],
-  ["Relance prévue",formatDay(d.nextDate)]
+  ["Relance prévue",formatDay(d.nextDate)],...(security?[["Autorisation gardiennage",d.securityCompliance||"À vérifier"]]:[])
  ];
  const history=activities.length?activities.map(a=>'<div class="activity-row"><span class="activity-dot"></span><div><strong>'+h(labelResult[a.result]||a.result)+'</strong><small>'+h(labelChannel[a.channel]||a.channel)+' • '+h(new Date(a.performed_at).toLocaleDateString("fr-FR"))+'</small><p>'+h(a.note||"")+'</p>'+(a.next_action?'<small>Suivi : '+h(a.next_action)+(a.next_date?' — '+formatDay(a.next_date):'')+'</small>':"")+'</div></div>').join(""):'<div class="empty-history">Aucune activité consignée. La préparation d’un email ne constitue pas un contact.</div>';
  return '<div class="sales-dossier">'+
  '<div class="sales-metrics">'+details.map(([a,b])=>'<div><small>'+h(a)+'</small><strong>'+h(b)+'</strong></div>').join("")+'</div>'+
  (security?'<p class="legal-hint">Gardiennage : l’engagement contractuel nécessite la vérification des autorisations et des garanties réglementaires.</p>':"")+
  '<div class="dossier-toolbar"><button class="btn green small" data-action="compose" data-kind="'+kind+'" data-id="'+h(record.id)+'" '+(!links.email?'disabled title="Email non connu"':'')+'>✉ Préparer un email</button><button class="btn secondary small" data-action="activity" data-kind="'+kind+'" data-id="'+h(record.id)+'">+ Consigner un échange</button><button class="btn secondary small" data-action="edit" data-kind="'+kind+'" data-id="'+h(record.id)+'">Modifier la fiche</button></div>'+
- (kind==="lead"?'<div class="sales-quote"><strong>Devis</strong><span>'+(Number(d.quote||0)>0?Number(d.quote).toLocaleString("fr-FR")+" DH":"Montant à définir")+'</span><small>Un devis enregistré dans le CRM n’est pas automatiquement envoyé.</small></div>':"")+
+ (kind==="lead"?'<div class="sales-quote"><strong>Devis</strong><span>'+(Number(d.quote||0)>0?Number(d.quote).toLocaleString("fr-FR")+" DH":"Montant à définir")+'</span><small>'+h(d.proposalScope||"Périmètre à préciser")+'. Un devis enregistré dans le CRM n’est pas automatiquement envoyé.</small></div>':"")+
  '<div class="activity-section"><h3>Historique des échanges</h3>'+history+'</div>'+
  '</div>';
 }
 export function renderComposeModal(record,kind,mode="intro"){
  const d=record.data||{},links=contactLinks(d,kind,mode);
- const modes=outreachModes.filter(m=>kind!=="lead"||m.value!=="followup");
+ const pastContact=Boolean(d.contactedAt || ["Contacté","En échange","Rendez-vous","Devis envoyé","Client"].includes(d.status));
+ const modes=outreachModes.filter(m=>(kind!=="lead"||m.value!=="followup")&&(m.value!=="followup"||pastContact));
  return '<div class="modal-overlay" id="composeOverlay"><section class="modal composer-modal" role="dialog" aria-modal="true" aria-labelledby="composerTitle"><div class="modal-head"><div><span class="eyebrow">Auréa · Prospection commerciale</span><h2 id="composerTitle">Rédiger pour '+h(d.name)+'</h2><p class="desc">Vérifiez les informations, personnalisez le message et choisissez votre messagerie.</p></div><button class="x" type="button" data-action="close-compose" aria-label="Fermer">×</button></div>'+
  '<div class="composer-grid"><label class="field"><span>Étape du parcours</span><select id="composerMode">'+modes.map(m=>'<option value="'+m.value+'" '+(m.value===mode?'selected':'')+'>'+h(m.label)+'</option>').join("")+'</select></label><label class="field"><span>Destinataire</span><input id="composerEmail" type="email" value="'+h(links.email)+'" placeholder="Adresse professionnelle à confirmer"></label></div>'+
  '<label class="field"><span>Objet de l’email</span><input id="composerSubject" value="'+h(links.subject)+'" required></label><label class="field"><span>Message personnalisé</span><textarea id="composerBody" rows="17">'+h(links.body)+'</textarea></label>'+
@@ -55,7 +56,7 @@ export function renderComposeModal(record,kind,mode="intro"){
 }
 export function renderActivityModal(record,kind){
  const d=record.data||{};
- const results=Object.entries(labelResult);
+ const results=[["note",labelResult.note],...Object.entries(labelResult).filter(([k])=>k!=="note")];
  const channels=Object.entries(labelChannel);
  return '<div class="modal-overlay" id="activityOverlay"><section class="modal activity-modal" role="dialog" aria-modal="true" aria-labelledby="activityTitle">'+
  '<div class="modal-head"><div><span class="eyebrow">Auréa · Historique CRM</span><h2 id="activityTitle">Consigner un échange</h2><p class="desc">'+h(d.name)+' — uniquement des actions réellement effectuées</p></div><button class="x" type="button" data-action="close-activity">×</button></div>'+
