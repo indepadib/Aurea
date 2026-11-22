@@ -24,6 +24,17 @@ test("host session cookie is signed, HttpOnly and rejects tampering",()=>{
  assert.equal(core.hostId(req(core.clearHostCookie())),null);
  assert.deepEqual(core.hostId(req(core.hostCookie(company,3).split(";")[0])),{id:company,rev:3});
 });
+test("turnover window rejects cleaning before checkout or after check-in",()=>{
+ const checkout=new Date(Date.now()+3600000).toISOString();
+ const start=new Date(Date.now()+2*3600000).toISOString();
+ const end=new Date(Date.now()+4*3600000).toISOString();
+ const checkin=new Date(Date.now()+5*3600000).toISOString();
+ assert.equal(core.validTurnover(start,end,checkout,checkin),true);
+ assert.equal(core.validTurnover(start,end,new Date(Date.now()+3*3600000).toISOString(),checkin),false);
+ assert.equal(core.validTurnover(start,end,checkout,new Date(Date.now()+3*3600000).toISOString()),false);
+ assert.equal(core.validTurnover(start,end,"invalid",checkin),false);
+ assert.equal(core.validTurnover(start,end),true);
+});
 test("only admins can confirm, assign and complete",()=>{
  assert.equal(core.validTransition("requested","confirmed","concierge"),false);
  assert.equal(core.validTransition("requested","cancelled","concierge"),true);
