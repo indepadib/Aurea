@@ -39,6 +39,12 @@ export default async function handler(req){
   const db=getDatabase();
   const exists=await db.sql`select id,data from aurea_crm_records where id=${id}::uuid and kind=${kind} limit 1`;
   if(!exists.length)return response({error:"Fiche introuvable"},404);
+  // Guard against an unlicensed security contract being marked closed.
+  const recordData=exists[0]?.data||{};
+  const isSecurity=kind==="lead" && recordData.segment==="SECURITE";
+  if(result==="vente_conclue" && isSecurity &&
+   (recordData.securityCompliance!=="Autorisations vérifiées" || String(recordData.complianceEvidence||"").trim().length<10))
+   return response({error:"Gardiennage : renseignez et documentez la vérification des autorisations avant de marquer ce dossier comme client."},409);
   const items=await db.sql`
    insert into aurea_crm_activities(record_id,kind,result,channel,note,next_action,next_date)
    values (${id}::uuid,${kind},${result},${channel},${note},${nextAction},${nextDate||null}::date)
